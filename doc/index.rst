@@ -13,9 +13,7 @@ User Guide
    :maxdepth: 2
 
    introduction
-   license
    quick_start
-   installation
 
 The API Reference
 -----------------

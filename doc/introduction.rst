@@ -1,7 +1,7 @@
 Introduction
 ============
 
-CAMPAREE is a RNA expression simulator that is primed used real data to give realistic output.
+CAMPAREE is a RNA expression simulator that is primed using real data to give realistic output.
 CAMPREE needs as input a reference genome with transcript annotations as well as fastq files of samples of the species to base the output on.
 For each sample, CAMPAREE outputs a simulated set of RNA transcripts mimicking expression levels with in the fastq files and accounting for isoform-level expression and allele-specific expression.
 It also outputs simulated diploid genomes and their corresponding annotations with phased SNP and indel calls in the transcriptome from fastq reads.

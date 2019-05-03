@@ -1,108 +1,88 @@
 # CAMPAREE
 
-## Installation using python virtual environments
+## Introduction
 
-Somewhere under your home directory, clone the CAMPAREE repository:
+CAMPAREE is a RNA expression simulator that is primed using real data to give realistic output.
+CAMPREE needs as input a reference genome with transcript annotations as well as fastq files of samples of the species to base the output on.
+For each sample, CAMPAREE outputs a simulated set of RNA transcripts mimicking expression levels with in the fastq files and accounting for isoform-level expression and allele-specific expression.
+It also outputs simulated diploid genomes and their corresponding annotations with phased SNP and indel calls in the transcriptome from fastq reads.
+Additionally the simulation outputs the underlying distributions used for expressing the transcripts.
 
-```bash
-git clone git@github.com:itmat/CAMPAREE.git
-```
+## Quick Start Guide
 
-Now set up a virtual environment using python 3.6.  I use conda on laptops but on PMACS I stick
-with python's venv module and I place the virual environment inside ny project:
+This guide will walk you through basic installation and useage of CAMPAREE running a simulation on a simplified dataset consisting of a mouse genome truncated to about 6 million bases and two samples of reads that align there.
 
-```bash
-cd CAMPAREE
-python3 -m venv ./venv_camparee
-```
+### Installation
 
-I put venv* in .gitignore so you can use any name you want if you start it with venv and not have
-to worry about accidentally committing it.
+Make sure you have the following installed on your system:
 
-Now activate the environment thus:
+- git
+- python version 3.6
+- Java 1.8
 
-```bash
-source ./venv_camparee/bin/activate
-```
+Pull the git repo for CAMPAREE and BEERS_UTILS the into a convenient location::
 
-You'll know the virtual environement is activated because the virtual environment path with precede
-your terminal prompt.  Now you need to add the python packages/modules upon which CAMPAREE depends.
-You do that by installing the packages/modules listed in the requirements_dev.txt file like so:
+    git clone git@github.com:itmat/CAMPAREE.git
+    git clone git@github.com:itmat/BEERS_UTILS.git
 
-```bash
-pip install -r requirements_dev.txt
-```
+Create a Python virtual environment to install required Python libraries to::
 
-The requirements_dev.txt file is supposed to be a superset of the requirements.txt file and in fact,
-pulls in the requirements.txt file.  Any packages/modules needed exclusively for development should
-be listed in the requirements_dev.txt file.  Requirements needed for a user to run the code should
-live in the requirements.txt file.
+    cd CAMPAREE
+    python3 -m venv ./venv_beers
 
-Next, we need to put the CAMPAREE package where python can find it.  And this is where the setup.py
-file on the top level comes in.  From the top level directory once again, do the following:
+And activate the environment::
 
-```bash
-pip install -e .
-```
+    source ./venv_beers/bin/activate
 
-This takes the current directory, packages it and creates a link to the packaged version in
-<virtualenv>/lib/python3.6/site-packages.  The file name is camparee.egg-link.  This allows
-python to find the CAMPAREE package and subpackages while we can continue to edit them in place.
+Install required libraries::
 
-Similarly, we need to point the python toward the BEERS_UTILS package as well. Again, from the
-top-level CAMPAREE directory, run the following:
+    pip install -r requirements.txt
 
-```bash
-pip install -e /path/to/BEERS_UTILS
-```
+Install BEERS package in your Python environment::
 
-Next go to the configuration directory and cp config.json to personal config file
-(_e.g._, my_config.json).  You can put it anywhere you like.  You will have to reference it
-when running CAMPAREE.  Open your version and modify all the absolute pathnames to conform to
-your directory structure.  Modify any parameters you wish to alter and save it.
+    pip install -e .
 
-There is 1 command that you can find in the bin directory under the top level, called run_camparee.py.
-Calling help on it will show you what is currently possible.
+Next, install the BEERS_UTILS package that CAMPAREE uses::
 
-```bash
- ./run_camparee.py -h
-usage: run_camparee.py [-h] -c CONFIG [-r RUN_ID] [-d]
+    pip install -e ../BEERS_UTILS
 
+Note that we currently require the use of the `-e` flag during these installs, otherwise CAMPAREE will not run successfully.
 
-CAMPAREE - RNA molecule simulator
+### Baby Genome
 
-optional arguments:
-  -h, --help            show this help message and exit
+The "baby genome" is a truncated version of mm10 consisting of segments of length at most 1 million bases chosen from chromosomes 1, 2, 3, X, Y, and MT.
 
-required named arguments:
-  -c CONFIG, --config CONFIG
-                        Full path to configuration file.
+Create an STAR index for alignment to the baby genome::
 
-optional named arguments - these override configuration file arguments.:
-  -r RUN_ID, --run_id RUN_ID
-                        Integer used to specify run id.
-  -d, --debug           Indicates whether additional diagnostics are printed.
+    bin/create_star_index_for_baby_genome.sh
 
-```
+### Perform Test Run
 
-The run id and the path to the configuration file are both required.  The -d is a debug switch.
-Without it, exception tracebacks will not appear.
+We are now ready to run CAMPAREE on a two small sample fastq files aligning to the baby genome.
+If you have not aleady done so for installation, activate the python environment::
 
-I have been using 100 as a seed to get reproducible results, I would suggest others use other
-seeds to avoid us getting tunnel vision.
+    source ./venv_beers/bin/activate
 
-The expression pipeline is more difficult to use as it requires the reference genome and the pair
-of alignment files presently (bam and bai) and really only runs the variants finder portion of
-the pipeline.  I threw in a BeagleStep that will eventually call the Beagle process.  For now, I
-put my own Java program as a parameter to that step so I'd have something to run.  You can
-add your own external process as a placemarker for now, if you like.
+The default config file for the baby genome has CAMPAREE run all operations serially on a single machine.
+To perform the test run with these defaults run::
 
-## Requirements for Users
+    bin/run_camparee.py -c config/baby.config.yaml -r 1
 
-If the user chooses to supply his/her own reference genome, it should be edited so that a
-sequence contains no line breaks.
+The argument `-r 1` indicates that the run number is 1.
+If you run this again, you must either remove the output directory `test_data/results/run_1/` or specify a new run number.
 
-If the user declines to provide gender for each sample, the sample will not have X,Y, MT
-data.  If the user neglects to provide gender for just some of the samples, X,Y,MT data
-will be generated for those samples that have gender and a warning will be issued to
-the user.
+It is also possible to test deployment to a cluster.
+For LSF clusters run::
+
+    bin/run_camparee.py -c config/baby.config.yaml -r 1 -m lsf
+
+For SGE clusters run::
+
+    bin/run_camparee.py -c config/baby.config.yaml -r 1 -m sge
+
+### Check Results
+
+When the run completes, output will be created in `CAMPAREE/test_data/results/run_1/`.
+The final outputs will be in the text files `test_data/results/run_1/CAMPAREE/data/sample1/molecule_file` and  `test_data/results/run_1/CAMPAREE/data/sample2/molecule_file`.
+Each line (after the header line) corresponds to a sequence of a single molecule in a tab-separated format.
+The default config file outputs 10000 molecules.
