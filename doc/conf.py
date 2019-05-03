@@ -105,7 +105,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'BEERS20doc'
+htmlhelp_basename = 'CAMPAREEdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -178,3 +178,7 @@ epub_exclude_files = ['search.html']
 
 
 # -- Extension configuration -------------------------------------------------
+
+# Don't actually install and build the following dependencies:
+# Good for ReadTheDocs support
+autodoc_mock_imports = ["pysam"]
