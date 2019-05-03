@@ -2,10 +2,10 @@
 
 ## Installation using python virtual environments
 
-Somewhere under your home directory, clone the develop branch of the CAMPAREE repository:
+Somewhere under your home directory, clone the CAMPAREE repository:
 
 ```bash
-git clone -b develop git@github.com:itmat/CAMPAREE.git
+git clone git@github.com:itmat/CAMPAREE.git
 ```
 
 Now set up a virtual environment using python 3.6.  I use conda on laptops but on PMACS I stick
