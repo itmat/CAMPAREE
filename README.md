@@ -1,6 +1,6 @@
 # CAMPAREE
 
-## Installation on PMACS Cluster for Developers
+## Installation using python virtual environments
 
 Somewhere under your home directory, clone the develop branch of the CAMPAREE repository:
 
