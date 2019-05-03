@@ -1,0 +1,2042 @@
+The Controller Module
+*********************
+
+class camparee.camparee_controller.CampareeController
+
+   The object essentially controls the flow of the pipeline.  The
+   run_camparee.py command instantiates a controller and calls one of
+   the controller methods depending upon the pipeline-stage requested.
+   The other methods in the class are helper methods.
+
+   assemble_input_samples()
+
+      Creates a list of sample objects, attached to the controller,
+      that represent those samples that are to be run in the
+      expression pipeline.  If not running from the expression
+      pipeline, this method is not used since the sample data is
+      already contained in each packet.  For each sample, a unique
+      combination of adapter sequences are provided.  The sample name
+      is assumed to be that of the input filename without the
+      extension.  Gender may or may not be provided in the
+      configuration data.  If not set, the gender will be inferred by
+      the expression pipeline.
+
+   static check_file_existence(directory_path, filename)
+
+      Helper method to establish whether provided directory path and
+      filename combine to point to an existing file :param
+      directory_path: path to directory holding file :param filename:
+      name of file :return: True if the path is valid and False
+      otherwise
+
+   create_controller_log()
+
+      Generates a controller log containing the timestamp, seed, run
+      id and current configuration data so that the user can replicate
+      this run at a later date.
+
+   create_output_folder_structure(stage_names)
+
+      Use the provided stage names, the run id and the top level
+      output directory path from the configuration data to create the
+      top level directory of a preliminary directory structure.  The
+      attempt fails if either the top level output directory exists
+      but either is not a directory or is a non-empty directory or if
+      the user has insufficient permissions to create the directory.
+      Created in the level directly below the top level output
+      directory, are folders named after the stage names provided
+      (i.e., controller, library_prep_pipeline, sequence_pipeline) and
+      beneath each of these are data and log folders.  Additional
+      subdirectories are created later to organize the numerous files
+      exprected and avoid congestion. :param stage_names: names of
+      folders directly below the top level output directory (e.g.,
+      controller, library_prep)
+
+   perform_setup(args, stage_names)
+
+      This helper method sets up a number of attributes and behaviors
+      in the controller.  Stacktraces are suppressed and only user
+      friendly errors are shown when the debugger is off (just a
+      command line arg right now).  The full configuration file data
+      and run id are salted away and the random seed is set.  The
+      initial output folder structure (excluding the subdirectory
+      structure needed to accommodate large numbers of file) is
+      created.  The output folder structure depends on the stage
+      names.  Also, the controller log is started. :param args: The
+      command line arguments :param stage_names: The stage names
+
+   plant_seed(seed)
+
+      Helper method to add the seed to the controller for later use.
+      The seed, if any, on the command line, takes precedence.  If no
+      seed is present on the command line, the controller
+      configuration data is searched for it. If no seed is found
+      there, one will be randomly generated.  The seed will be added
+      to the controller log file created for this run so that the user
+      may re-create the run exactly at a later date, assuming all else
+      remains the same. :param seed: The seed value found on the
+      command line, if any.
+
+   retrieve_configuration(configuration_file_path)
+
+      Helper method to parse the configuration file given by the path
+      info a dictionary attached to the controller object.  For
+      convenience, the portion of the configuration file that contains
+      parametric data specific to the controller is set to a separate
+      dictionary also attached to the controller. :param
+      configuration_file_path: The absolute file path of the
+      configuration file
+
+   run_camparee_pipeline(args)
+
+      This is how run_camparee.py calls the camparee pipeline. This
+      method reads the command line arguments, parses the config file,
+      and calls the necessary methods to run camparee. :param args:
+      command line arguments
+
+   set_run_id(run_id)
+
+      Helper method to add the run id to the controller for later use.
+      The run id, if any, on the command line takes precedence.  If no
+      run id is present on the command line, the controller
+      configuration data is searched for it.  If no run id is found in
+      either place, an error is raised. :param run_id: The run id
+      found on the command line, if any.
+
+   validate_samples()
+
+      Iterates over the starting samples and verifies that their files
+      can be found and that the gender designations, if any, are
+      appropriate. :return: True is valid and false otherwise.
+
+
+Abstract Camparee Step
+**********************
+
+class camparee.abstract_camparee_step.AbstractCampareeStep
+
+   Abstract class defining the minimal methods required by a step in
+   the CAMPAREE pipeline.
+
+   execute()
+
+      Entry point into the CAMPAREE step.
+
+   get_commandline_call()
+
+      Prepare command to execute the step from the command line, given
+      all of the parameters used to call the execute() method.
+
+      Parameters:
+         **same**** or ****equivalent parameters given to the
+         execute****(****) ****method.** (*The*) --
+
+      Returns:
+         Command to execute on the command line. It will perform the
+         same operations as a call to execute() with the same
+         parameters.
+
+      Return type:
+         string
+
+   get_validation_attributes()
+
+      Prepare attributes required by the is_output_valid() method to
+      validate output generated by executing this specific instance of
+      the pipeline step (either through the command line call or the
+      execute method).
+
+      Returns:
+         Key-value pairings of attributes accepted by the
+         is_output_valid() method.
+
+      Return type:
+         dict
+
+   static is_output_valid(validation_attributes)
+
+      Check if output of this step, for a specific job/execution is
+      correctly formed and valid, given the dictionary of valdiation
+      attributes. Prepare these attributes for a given executing by
+      calling the get_validation_attributes() method.
+
+      Parameters:
+         **validation_attributes** (*dict*) -- Key-value pairings of
+         attributes generated by the get_validation_attributes()
+         method.
+
+      Returns:
+         True  - Output files for this step were created and are well
+         formed. False - Output files for this steo do not exist or
+         are missing data.
+
+      Return type:
+         boolean
+
+   static main()
+
+      Entry point into script. Allows script to be executed/submitted
+      via the command line.
+
+   validate()
+
+      Checks validity of parameters used to instantiate the CAMPAREE
+      step.
+
+      Returns:
+         True  - All parameters required to run this step were
+         provided and
+            are within valid ranges.
+
+         False - One or more of the paramters is missing or contains
+         an invalid
+            value.
+
+      Return type:
+         boolean
+
+
+Camparee Step Provider
+**********************
+
+class camparee.camparee_step_provider.CampareeStepProvider
+
+   Short summary.
+
+   __steps
+
+      Dictionary mapping pipeline step name, which is accessible and
+      used by the rest of the code base, to the corresponding
+      camparee_step. The camparee_step class must extend the
+      AbstractCampareeStep class.
+
+      Type:
+         dict
+
+   get(step_name)
+
+      Return camparee_step class corresponding to the given step name.
+
+      Parameters:
+         **step_name** (*string*) -- Name of the step corresponding to
+         a specific camparee step interface.
+
+      Returns:
+         Class providing interface to the camparee step.
+
+      Return type:
+         AbstractCampareeStep
+
+   list_supported_camparee_steps()
+
+      Return list of camparee_steps currently registered for use.
+
+      Returns:
+         Camparee_steps currently registered for use.
+
+      Return type:
+         list
+
+   register_step(step_name, step_interface, package_name='camparee')
+
+      Add interface to a given camparee step so it's accessible and
+      useable by the rest of the code base.
+
+      Parameters:
+         * **step_name** (*string*) -- Name of the step
+           corresponding to a specific pipeline step interface.
+
+         * **step_interface** (*AbstractCampareeStep*) -- Class
+           provding an interface to the camparee pipeline step.
+
+         * **package_name** (*string*) -- Name of the package from
+           which to load the interface class. [Default: camparee].
+
+exception camparee.camparee_step_provider.CampareeStepProviderException
+
+
+The Expression Pipeline
+***********************
+
+exception camparee.expression_pipeline.CampareeValidationException
+
+class camparee.expression_pipeline.ExpressionPipeline(configuration, scheduler_mode, output_directory_path, input_samples)
+
+   This class represents a pipeline of steps that take user supplied
+   fastq files through alignment, variants finding, parental genome
+   construction, annotation, quantification and generation of
+   transcripts and finally the generation of packets of molecules that
+   may be used to simulate RNA sequencing.
+
+   generate_job_seeds()
+
+      Generate one seed per job that needs a seed, returns a
+      dictionary mapping job names to seeds
+
+      We generate seeds for each job since they run on separate nodes
+      of the cluster, potentially and so do not simply share Numpy
+      seeds. We generate them all ahead of time so that if jobs need
+      to be restart, they can reuse the same seed.
+
+   run_step(step_name, sample, execute_args, cmd_line_args, dependency_list=None, jobname_suffix=None)
+
+      Helper function that runs the given step, with the given
+      parameters. If CAMPAREE is configured to use a scheduler/job
+      monitor, this helper function wraps submission of the step to
+      the job monitor.
+
+      Parameters:
+         * **step_name** (*string*) -- Name of the CAMPAREE step to
+           run. It should be in the list of steps stored in the steps
+           dictionary.
+
+         * **sample** (*Sample*) -- Sample to run through the step.
+           For steps that aren't associated with specific samples, set
+           this to None.
+
+         * **execute_args** (*list*) -- List of positional
+           paramteres to pass to the execute() method for the given
+           step.
+
+         * **cmd_line_args** (*list*) -- List of positional
+           parameters to pass to the get_commandline_call() method for
+           the given step.
+
+         * **dependency_list** (*list*) -- List of job names (if
+           any) the current step depends on. Default: None.
+
+         * **jobname_suffix** (*string*) -- Suffix to add to job
+           submission ID. Default: None.
+
+   set_third_party_software()
+
+      Helper method to gather the names of all the 3rd party
+      application files or directories and use them to set all the
+      paths needed in the pipeline.  Since the third party software is
+      shipped with this application, validation should not be
+      necessary.  Software is identified generally by name and not
+      specifically by filename since filenames may contain versioning
+      and other artefacts. :return: the filenames for beagle, star,
+      and kallisto, and the directory name for bowtie2.
+
+   validate_and_set_output_data(output)
+
+      Helper method to validate and set output data. :param output:
+      The output dictionary extracted from the configuration file.
+      :return: True for valid output data and False otherwise
+
+   validate_and_set_resources(resources)
+
+      Since the resources are input file intensive, and since
+      information about resource paths is found in the configuration
+      file, this method validates that all needed resource information
+      is complete, consistent and all input data is found. :param
+      resources: dictionary containing resources from the
+      configuration file :return: True if valid and False otherwise
+
+
+Genome Alignment
+****************
+
+class camparee.genome_alignment.GenomeAlignmentStep(log_directory_path, data_directory_path, parameters={})
+
+   execute(sample, star_index_directory_path, star_bin_path)
+
+      Use STAR to align fastq files for a given sample, to the
+      reference genome.
+
+      Parameters:
+         * **sample** (*Sample*) -- Sample containing paths for
+           FASTQ files to align, or pre-aligned BAM file.
+
+         * **star_index_directory_path** (*string*) -- Path to
+           directory containing STAR index.
+
+         * **star_bin_path** (*string*) -- Path to STAR executable
+           binary.
+
+   get_commandline_call(sample, star_index_directory_path, star_bin_path)
+
+      Prepare command to execute the GenomeAlignment from the command
+      line, given all of the arugments used to run the execute()
+      function.
+
+      Parameters:
+         * **sample** (*Sample*) -- Sample containing paths for
+           FASTQ files to align, or pre-aligned BAM file.
+
+         * **star_index_directory_path** (*string*) -- Path to
+           directory containing STAR index.
+
+         * **star_bin_path** (*string*) -- Path to STAR executable
+           binary.
+
+      Returns:
+         Command to execute on the command line. It will perform the
+         same operations as a call to execute() with the same
+         parameters.
+
+      Return type:
+         string
+
+   get_genome_bam_path(sample)
+
+      Determine whether user provided a BAM file for the given sample,
+      and return either this path, or the default path used by the
+      GenomeAlignment step.
+
+      Parameters:
+         **sample** (*Sample*) -- Sample containing paths for FASTQ
+         files to align, or pre-aligned BAM file.
+
+      Returns:
+         Path to BAM file associated with this sample. Either path
+         given by user or default path used by GenomeAlignment step.
+
+      Return type:
+         string
+
+   get_validation_attributes(sample, star_index_directory_path, star_bin_path)
+
+      Prepare attributes required by is_output_valid() function to
+      validate output generated the STAR genome job corresponding to
+      the given sample.
+
+      Parameters:
+         * **sample** (*Sample*) -- Sample defining the FASTQ files
+           to be aligned, or the pre-aligned BAM.
+
+         * **star_index_directory_path** (*string*) -- Path to
+           directory containing STAR index. [Note: this parameter is
+           captured just so get_validation_attributes() accepts the
+           same arguments as get_commandline_call(). It is not used
+           here.]
+
+         * **star_bin_path** (*string*) -- Path to STAR executable
+           binary. [Note: this parameter is captured just so
+           get_validation_attributes() accepts the same arguments as
+           get_commandline_call(). It is not used here.]
+
+      Returns:
+         The GenomeAlignment job's data directory, sampleID, BAM path,
+         and a flag indicating whether or not the user provided a pre-
+         aligned BAM file.
+
+      Return type:
+         dict
+
+   static is_output_valid(validation_attributes)
+
+      Check if output of GenomeAlignment for a specific job/execution
+      is correctly formed and valid, given a job's data directory,
+      sample id, BAM file path, and a flag indicating whether or not
+      the user provided a pre-aligned BAM file. If the user provided a
+      pre-aligned BAM file, this method assumes that the BAM file is
+      complete if it exists. If this script performed the alignment,
+      it will check STAR log files to confirm the BAM file is
+      complete.
+
+      Parameters:
+         **validation_attributes** (*dict*) -- A job's data_directory,
+         sample_id, path to the BAM file, and a flag indicating
+         whether or not the user provided a pre-aligned BAM.
+
+      Returns:
+         True  - GenomeAlignment output files were created and are
+         well formed. False - GenomeAlignment output files do not
+         exist or are missing data.
+
+      Return type:
+         boolean
+
+   static main(cmd_args)
+
+      Entry point into class. Used when script be executed/submitted
+      via the command line with the 'align' subcommand.
+
+   validate()
+
+      Checks validity of parameters used to instantiate the CAMPAREE
+      step.
+
+      Returns:
+         True  - All parameters required to run this step were
+         provided and
+            are within valid ranges.
+
+         False - One or more of the paramters is missing or contains
+         an invalid
+            value.
+
+      Return type:
+         boolean
+
+class camparee.genome_alignment.GenomeBamIndexStep(log_directory_path, data_directory_path, parameters=None)
+
+   execute(sample, bam_file_path)
+
+      Build index of a given bam file.
+
+      Parameters:
+         * **sample** (*Sample*) -- Sample associated with BAM file
+           to be indexed.
+
+         * **bam_file_path** (*string*) -- BAM file to be indexed.
+
+   get_commandline_call(sample, bam_file_path)
+
+      Prepare command to execute the GenomeIndex from the command
+      line, given all of the arugments used to run the execute()
+      function.
+
+      Parameters:
+         * **sample** (*Sample*) -- Sample associated with BAM file
+           to be indexed.
+
+         * **bam_file_path** (*string*) -- BAM file to be indexed.
+
+      Returns:
+         Command to execute on the command line. It will perform the
+         same operations as a call to execute() with the same
+         parameters.
+
+      Return type:
+         string
+
+   get_validation_attributes(sample, bam_file_path)
+
+      Prepare attributes required by is_output_valid() function to
+      validate output generated the BAM index job corresponding to the
+      given bam file.
+
+      Parameters:
+         * **sample** (*Sample*) -- Sample associated with BAM file
+           to be indexed. [Note: this parameter is captured just so
+           get_validation_attributes() accepts the same arguments as
+           get_commandline_call(). It is not used here.]
+
+         * **bam_file_path** (*string*) -- BAM file to be indexed.
+
+      Returns:
+         Path to the BAM file indexed by this step.
+
+      Return type:
+         dict
+
+   static is_output_valid(validation_attributes)
+
+      Check if output of GenomeBamIndexStep for a specific
+      job/execution is valid, given a job's BAM file path.
+
+      Parameters:
+         **validation_attributes** (*dict*) -- The path to a job's BAM
+         file.
+
+      Returns:
+         True  - BAM index file was created in same directory as the
+         BAM file. False - BAM index file is missing from same
+         directory as the BAM file.
+
+      Return type:
+         boolean
+
+   static main(cmd_args)
+
+      Entry point into class. Used when script be executed/submitted
+      via the command line with the 'index' subcommand.
+
+   validate()
+
+      Checks validity of parameters used to instantiate the CAMPAREE
+      step.
+
+      Returns:
+         True  - All parameters required to run this step were
+         provided and
+            are within valid ranges.
+
+         False - One or more of the paramters is missing or contains
+         an invalid
+            value.
+
+      Return type:
+         boolean
+
+
+Indexing
+********
+
+
+Variants Finding
+****************
+
+class camparee.variants_finder.PositionInfo(chromosome, position)
+
+   This class is meant to capture all the read data associated with a
+   particular chromsome and position on the genome.  It is used to
+   ascertain whether this position actually holds a variant.  If it
+   does, the data is formatted into a string to be written into the
+   variants file.
+
+   calculate_entropy()
+
+      Use the top two abundances (if two) of the variants for the
+      given position to compute an entropy.  If only one abundance is
+      given, return 0. :return: entropy for the given position
+
+   filter_reads(min_abundance_threshold, reference_base)
+
+      Filters out from this position, reads that are not considered
+      true variants.  Any reads with read counts of only 1 are
+      excluded to start with. At most, only the top two remaining
+      reads are retained.  The lesser of those two reads may also be
+      removed if it does not satisfy the minimum abundance threshold
+      criterion.  The minimum abundance threshold criterion specifies
+      that the percent contribution of the lesser variant reads to the
+      total reads be equal or greater than the threshold provided.  In
+      the event of a tie for one of both of those top two slots,
+      preference is given to the reference base if it is included in
+      the tie. If at any point in filtering, only one read remains and
+      its description matches the reference base, it is removed,
+      leaving no variants.  Once complete, the reads for this position
+      object contain only true variants (which may include the
+      reference base if there is one another true variant). :param
+      min_abundance_threshold:  criterion for minimum abundance
+      threshold :param reference_base:  the base of the reference
+      genome at this position.
+
+class camparee.variants_finder.Read
+
+   A named tuple that possesses all the attributes of a variant type:
+   match (M), deletion (D), insertion (I) chromosome: chrN position:
+   position on ref genome description: description of the variant
+   (e.g., C, IAA, D5, etc.)
+
+   description
+
+      Alias for field number 1
+
+   position
+
+      Alias for field number 0
+
+class camparee.variants_finder.VariantsFinderStep(log_directory_path, data_directory_path, parameters={})
+
+   This class creates a text file listing variants for those locations
+   in the reference genome having variants. The variants include snps
+   and indels with the number of reads attributed to each variant. The
+   relevant bam-formatted input file is expected to be indexed and
+   sorted.
+
+   This script outputs a file that gives the full breakdown at each
+   location in the genome of the number of A's, C's, G's and T's as
+   well as the number of each size of insertion and deletion. If it's
+   an insertion the sequence of the insertion itself is given. So for
+   example a line of output like the following means 29 reads had a C
+   in that location and three reads had an insertion of TTT.
+   chr1:10128503 | C:29 | ITTT:3
+
+   Note that only the top two variants are kept and of those the
+   lesser variant's counts must meet certain user criteria (minimum
+   threshold, read total count) to be considered a variant.  Single
+   reads that match the corresponding base in the reference genome are
+   not variants and as such are not kept.
+
+   call_variants(chromosome, reads)
+
+      Parses the reads dictionary (read named tuple:read count) for
+      each chromosome - position to create a line with the variants
+      and their counts delimited by pipes.  Dumping each chromosome's
+      worth of data at a time is done to avoid too sizable a
+      dictionary.  Additionally, if the user requests a sort by
+      entropy, this function will do that ordering and send that data
+      to stdout. :param chromosome: chromosome under consideration
+      here :param reads: dictionary of reads to read counts
+
+   collect_reads(chromosome)
+
+      Iterate over the input txt file containing cigar, seq, start
+      location, chromosome for each read and consolidate reads for
+      each position on the genome.
+
+   execute(sample, alignment_file_path, chr_ploidy_data, reference_genome, seed=None, chromosomes=None)
+
+      Entry point into variants_finder.  Iterates over the chromosomes
+      in the list provided by the chr_ploidy_data keys to pick out
+      variants.  Chromosomes that are not pertainent to the sample's
+      gender are skipped.  If no sample gender is specified, only
+      those chromosomes that have the same ploidy for both genders are
+      processed. :param sample: The sample for which the variants for
+      to be found :param chr_ploidy_data: dictionary of chromosomes as
+      keys and a dictionary of male/female ploidy as values. :param
+      reference_genome: A dictionary representation of the reference
+      genome :param seed: Seed for random number generator :param
+      chromosomes: A listing of chromosomes to replace the list
+      obtained from the alignment file.  Used for debugging purposes.
+
+   filter_chromosome_list(sample, chr_ploidy_data)
+
+      Culls from the chromosome list, those chromosomes that are
+      either not relevant given the sample gender or not relevant
+      because no sample gender was provided. :param sample: subject
+      sample which contains gender information :param chr_ploidy_data:
+      dictionary of chromosomes as keys and a dictionary of
+      male/female ploidy as values.
+
+   get_commandline_call(sample, alignment_file_path, chr_ploidy_file_path, reference_genome_file_path, seed=None)
+
+      Prepare command to execute the VariantsFinder from the command
+      line, given all of the arugments used to run the execute()
+      function.
+
+      Parameters:
+         * **sample** (*Sample*) -- Sample for which variants will
+           be called.
+
+         * **alignment_file_path** (*string*) -- Path to BAM file
+           which will be parsed.
+
+         * **chr_ploidy_file_path** (*string*) -- File that maps
+           chromosome names to their male/female ploidy.
+
+         * **reference_genome_file_path** (*string*) -- File that
+           maps chromosome names in reference to nucleotide sequence.
+
+         * **seed** (*integer*) -- Seed for random number generator.
+           Used to repeated runs will produce the same results.
+
+      Returns:
+         Command to execute on the command line. It will perform the
+         same operations as a call to execute() with the same
+         parameters.
+
+      Return type:
+         string
+
+   get_validation_attributes(sample, alignment_file_path, chr_ploidy_file_path, reference_genome_file_path, seed=None)
+
+      Prepare attributes required by is_output_valid() function to
+      validate output generated the VariantsFinder job corresponding
+      to the given sample.
+
+      Parameters:
+         * **sample** (*Sample*) -- Sample for which variants will
+           be called.
+
+         * **alignment_file_path** (*string*) -- Path to BAM file
+           which will be parsed. [Note: this parameter is captured
+           just so get_validation_attributes() accepts the same
+           arguments as get_commandline_call(). It is not used here.]
+
+         * **chr_ploidy_file_path** (*string*) -- File that maps
+           chromosome names to their male/female ploidy. [Note: this
+           parameter is captured just so get_validation_attributes()
+           accepts the same arguments as get_commandline_call(). It is
+           not used here.]
+
+         * **reference_genome_file_path** (*string*) -- File that
+           maps chromosome names in reference to nucleotide sequence.
+           [Note: this parameter is captured just so
+           get_validation_attributes() accepts the same arguments as
+           get_commandline_call(). It is not used here.]
+
+         * **seed** (*integer*) -- Seed for random number generator.
+           Used to repeated runs will produce the same results. [Note:
+           this parameter is captured just so
+           get_validation_attributes() accepts the same arguments as
+           get_commandline_call(). It is not used here.]
+
+      Returns:
+         A VariantsFinder job's data_directory, log_directory, and
+         sample_id.
+
+      Return type:
+         dict
+
+   identify_variant(position_info, variants)
+
+      Helper method to filter position reads to identify variants
+      :param position_info: position being evaluated :param variants:
+      growing list of variants to which this position may be added if
+      it contains variants
+
+   static is_output_valid(validation_attributes)
+
+      Check if output of VariantsFinder for a specific job/execution
+      is correctly formed and valid, given a job's data directory, log
+      directory, and sample id. Prepare these attributes for a given
+      sample's jobs using the get_validation_attributes() method.
+
+      Parameters:
+         **validation_attributes** (*dict*) -- A job's data_directory,
+         log_directory, and sample_id.
+
+      Returns:
+         True  - VariantsFinder output files were created and are well
+         formed. False - VariantsFinder output files do not exist or
+         are missing data.
+
+      Return type:
+         boolean
+
+   load_variants(variants, variants_file_path)
+
+      Load the variants to a file in the user's designated output
+      directory one chromosome at a time.  The filename has the stem
+      of the alignment filename suffixed with _variants.txt :param
+      variants: variants list for one chromosome.
+
+   static main()
+
+      Entry point into script. Allows script to be executed/submitted
+      via the command line.
+
+   remove_clips(cigar, sequence)
+
+      Remove soft and hard clips at the beginning and end of the cigar
+      string and remove soft and hard clips at the beginning of the
+      seq as well.  Modified cigar string and sequence are returned
+      :param cigar: raw cigar string from read :param sequence: raw
+      sequence string from read :return: tuple of modified cigar and
+      sequence strings (sans clips)
+
+   validate()
+
+      Checks validity of parameters used to instantiate the CAMPAREE
+      step.
+
+      Returns:
+         True  - All parameters required to run this step were
+         provided and
+            are within valid ranges.
+
+         False - One or more of the paramters is missing or contains
+         an invalid
+            value.
+
+      Return type:
+         boolean
+
+
+Intron Quantification
+*********************
+
+class camparee.intron_quant.IntronQuantificationStep(log_directory_path, data_directory_path, parameters)
+
+   execute(aligned_file_path, output_directory, geneinfo_file_path)
+
+      Entry point into the CAMPAREE step.
+
+   get_commandline_call(aligned_file_path, output_directory, geneinfo_file_path)
+
+      Prepare command to execute the IntronQuantification from the
+      command line, given all of the arugments used to run the
+      execute() method.
+
+      Parameters:
+         * **aligned_file_path** (*string*) -- Path to BAM file
+           aligned to genome.
+
+         * **output_directory** (*string*) -- Directory where the
+           following output files will be saved:
+           {CAMPAREE_CONSTANTS.INTRON_OUTPUT_FILENAME},
+           {CAMPAREE_CONSTANTS.INTRON_OUTPUT_ANTISENSE_FILENAME},
+           {CAMPAREE_CONSTANTS.INTERGENIC_OUTPUT_FILENAME}.
+
+         * **geneinfo_file_path** (*string*) -- Geneinfo file in BED
+           format with 1-based, inclusive coordinates.
+
+      Returns:
+         Command to execute on the command line. It will perform the
+         same operations as a call to execute() with the same
+         parameters.
+
+      Return type:
+         string
+
+   get_validation_attributes(aligned_file_path, output_directory, geneinfo_file_path)
+
+      Prepare attributes required by is_output_valid() function to
+      validate output generated the IntronQuantification job.
+
+      Parameters:
+         * **aligned_file_path** (*string*) -- Path to BAM file
+           aligned to genome. [Note: this parameter is captured just
+           so get_validation_attributes() accepts the same arguments
+           as get_commandline_call(). It is not used here.]
+
+         * **output_directory** (*string*) -- Directory where the
+           following output files are saved:
+           {CAMPAREE_CONSTANTS.INTRON_OUTPUT_FILENAME},
+           {CAMPAREE_CONSTANTS.INTRON_OUTPUT_ANTISENSE_FILENAME},
+           {CAMPAREE_CONSTANTS.INTERGENIC_OUTPUT_FILENAME}.
+
+         * **geneinfo_file_path** (*string*) -- Geneinfo file in BED
+           format with 1-based, inclusive coordinates. [Note: this
+           parameter is captured just so get_validation_attributes()
+           accepts the same arguments as get_commandline_call(). It is
+           not used here.]
+
+      Returns:
+         A IntronQuantification job's output_directory.
+
+      Return type:
+         dict
+
+   static is_output_valid(validation_attributes)
+
+      Check if output of this step, for a specific job/execution is
+      correctly formed and valid, given the dictionary of valdiation
+      attributes. Prepare these attributes for a given executing by
+      calling the get_validation_attributes() method.
+
+      Parameters:
+         **validation_attributes** (*dict*) -- Key-value pairings of
+         attributes generated by the get_validation_attributes()
+         method.
+
+      Returns:
+         True  - Output files for this step were created and are well
+         formed. False - Output files for this steo do not exist or
+         are missing data.
+
+      Return type:
+         boolean
+
+   static main()
+
+      Entry point into script. Allows script to be executed/submitted
+      via the command line.
+
+   validate()
+
+      Checks validity of parameters used to instantiate the CAMPAREE
+      step.
+
+      Returns:
+         True  - All parameters required to run this step were
+         provided and
+            are within valid ranges.
+
+         False - One or more of the paramters is missing or contains
+         an invalid
+            value.
+
+      Return type:
+         boolean
+
+
+Variants Compilation
+********************
+
+class camparee.variants_compilation.VariantsCompilationStep(log_directory_path, data_directory_path, parameters=None)
+
+   execute(sample_id_list, chr_ploidy_data, reference_genome, seed=None)
+
+      Entry point into variants_compilation.
+
+      Parameters:
+         * **sample_id_list** (*list*) -- List of sample IDs
+
+         * **chr_ploidy_data** (*dict*) -- Dictionary of chromosomes
+           as keys and a dictionary of male/female ploidy as values.
+
+         * **reference_genome** (*dict*) -- Dictionary
+           representation of the reference genome
+
+         * **seed** (*int*) -- Seed for random number generator.
+           Used so repeated runs will produce the same results.
+
+   get_commandline_call(samples, chr_ploidy_file_path, reference_genome_file_path, seed=None)
+
+      Prepare command to execute the VariantsCompilationStep from the
+      command line, given all of the arugments used to run the
+      execute() function.
+
+      Parameters:
+         * **samples** (*list*) -- List of Sample() objects for
+           which variants have been called and need to be merged.
+
+         * **chr_ploidy_file_path** (*string*) -- File that maps
+           chromosome names to their male/female ploidy.
+
+         * **reference_genome_file_path** (*string*) -- File that
+           maps chromosome names in reference to nucleotide sequence.
+
+         * **seed** (*integer*) -- Seed for random number generator.
+           Used so repeated runs will produce the same results.
+
+      Returns:
+         Command to execute on the command line. It will perform the
+         same operations as a call to execute() with the same
+         parameters.
+
+      Return type:
+         string
+
+   get_validation_attributes(samples, chr_ploidy_file_path, reference_genome_file_path, seed=None)
+
+      Prepare attributes required by is_output_valid() function to
+      validate output generated the VariantsCompilationStep job.
+
+      Parameters:
+         * **samples** (*list*) -- List of Sample() objects for
+           which variants have been called and need to be merged.
+           [Note: this parameter is captured just so
+           get_validation_attributes() accepts the same arguments as
+           get_commandline_call(). It is not used here.]
+
+         * **chr_ploidy_file_path** (*string*) -- File that maps
+           chromosome names to their male/female ploidy. [Note: this
+           parameter is captured just so get_validation_attributes()
+           accepts the same arguments as get_commandline_call(). It is
+           not used here.]
+
+         * **reference_genome_file_path** (*string*) -- File that
+           maps chromosome names in reference to nucleotide sequence.
+           [Note: this parameter is captured just so
+           get_validation_attributes() accepts the same arguments as
+           get_commandline_call(). It is not used here.]
+
+         * **seed** (*integer*) -- Seed for random number generator.
+           Used so repeated runs will produce the same results. [Note:
+           this parameter is captured just so
+           get_validation_attributes() accepts the same arguments as
+           get_commandline_call(). It is not used here.]
+
+      Returns:
+         A VariantsCompilationStep run's data_directory and
+         log_directory.
+
+      Return type:
+         dict
+
+   static is_output_valid(validation_attributes)
+
+      Check if output of VariantsCompilationStep for a specific
+      job/execution is correctly formed and valid, given the run's
+      data and log directories. Prepare these attributes using the
+      get_validation_attributes() method.
+
+      Parameters:
+         **validation_attributes** (*dict*) -- A CAMPAREE run's
+         data_directory and log_directory.
+
+      Returns:
+         True  - VariantsCompilationStep output files were created and
+         are
+            well formed.
+
+         False - VariantsCompilationStep output files do not exist or
+         are
+            missing data.
+
+      Return type:
+         boolean
+
+   static main()
+
+      Entry point into script. Allows script to be executed/submitted
+      via the command line.
+
+   validate()
+
+      Checks validity of parameters used to instantiate the CAMPAREE
+      step.
+
+      Returns:
+         True  - All parameters required to run this step were
+         provided and
+            are within valid ranges.
+
+         False - One or more of the paramters is missing or contains
+         an invalid
+            value.
+
+      Return type:
+         boolean
+
+
+Gene Files Preparation
+**********************
+
+class camparee.gene_files_preparation.GeneFilesPreparation(genome_fasta_filename, geneinfo_filename, genes_fasta_filename, gene_postfix='')
+
+   This class contains scripts to produce a fasta file for genes given
+   the genome fasta file, a file containing exon locations, and a gene
+   info file.  Additionally, any line in the gene info file related to
+   a chromosome not available in the genome fasta file, is discarded
+   in a new version of the gene info file.
+
+   create_exon_location_list()
+
+      Generate a unique listing of exon location strings from the
+      provided gene info file.  Note that the same exon may appear in
+      multiple genes.  So the listing is actually a set to avoid
+      duplicate entries.
+
+   create_exon_sequence_map(genome_chromosome, sequence)
+
+      For the given genome chromosome and its sequence, create a
+      dictionary of exon sequences keyed to the exon's location (i.e.,
+      chr:start-end). :param genome_chromosome: given genome
+      chromosome :param sequence: the genome sequence corresponding to
+      the genome chromosome (without line breaks) :return: map of exon
+      location : exon sequence
+
+   static main()
+
+      Entry point into script.  Parses the argument list to obtain all
+      the files needed and feeds them to the class constructor.
+      Finally calls the main script.
+
+   prepare_gene_files()
+
+      Essentially does the work of creating a genes fasta file from
+      the inputs provided to the program
+
+   scrub_genome_fasta_file()
+
+      Edits the genome fasta file, creating an edited version (genome
+      fasta filename without extension + _edited.fa). Edits include:
+      1.  Removing suplemmental information from the description line
+      2.  Removing internal newlines in the sequence 3.  Insuring all
+      bases in sequence are represented in upper case. This edited
+      file is the one used in subsequent scripts.
+
+   update_geneinfo_file()
+
+      Create an update geneinfo file in which lines related to
+      chromosomes that are not present in the genome fasta file are
+      expunged.  If there are no such omissions, the files will be
+      identical.
+
+
+Beagle
+******
+
+class camparee.beagle.BeagleStep(log_directory_path, data_directory_path, parameters=None)
+
+   execute(beagle_jar_path, seed=None)
+
+      Entry point into the beagle step. This ends up running the
+      Beagle jar from the command line.
+
+      Parameters:
+         * **beagle_jar_path** (*string*) -- Path to the beagle JAR
+           file.
+
+         * **seed** (*int*) -- Seed for random number generator.
+           Used so repeated runs will produce the same results.
+
+   get_commandline_call(beagle_jar_path, seed=None)
+
+      Prepare command to execute the BeagleStep from the command line,
+      given all of the arugments used to run the execute() function.
+
+      Parameters:
+         * **beagle_jar_path** (*string*) -- Path to the beagle JAR
+           file.
+
+         * **seed** (*int*) -- Seed for random number generator.
+           Used so repeated runs will produce the same results.
+
+      Returns:
+         Command to execute on the command line. It will perform the
+         same operations as a call to execute() with the same
+         parameters.
+
+      Return type:
+         string
+
+   get_validation_attributes(beagle_jar_path, seed=None)
+
+      Prepare attributes required by is_output_valid() function to
+      validate output generated the BeagleStep job.
+
+      Parameters:
+         * **beagle_jar_path** (*string*) -- Path to the beagle JAR
+           file. [Note: this parameter is captured just so
+           get_validation_attributes() accepts the same arguments as
+           get_commandline_call(). It is not used here.]
+
+         * **seed** (*int*) -- Seed for random number generator.
+           Used so repeated runs will produce the same results. [Note:
+           this parameter is captured just so
+           get_validation_attributes() accepts the same arguments as
+           get_commandline_call(). It is not used here.]
+
+      Returns:
+         A BeagleStep run's data_directory and log_directory.
+
+      Return type:
+         dict
+
+   static is_output_valid(validation_attributes)
+
+      Check if output of BeagleStep for a specific job/execution is
+      correctly formed and valid, given the run's data and log
+      directories. Prepare these attributes using the
+      get_validation_attributes() method.
+
+      Parameters:
+         **validation_attributes** (*dict*) -- A CAMPAREE run's
+         data_directory and log_directory.
+
+      Returns:
+         True  - BeagleStep output files were created and are well
+         formed. False - BeagleStep output files do not exist or are
+         missing data.
+
+      Return type:
+         boolean
+
+   static main()
+
+      Entry point into script. Allows script to be executed/submitted
+      via the command line.
+
+   validate()
+
+      Checks validity of parameters used to instantiate the CAMPAREE
+      step.
+
+      Returns:
+         True  - All parameters required to run this step were
+         provided and
+            are within valid ranges.
+
+         False - One or more of the paramters is missing or contains
+         an invalid
+            value.
+
+      Return type:
+         boolean
+
+
+Genome Builder
+**************
+
+class camparee.genome_builder.Genome(name, chromosome, start_sequence, start_position, genome_output_file_stem)
+
+   Holds name, chromosome, current seq, current position (0 indexed)
+   and current offset for a nascent, custom genome. The current offset
+   is such that when it is added to the current position, one arrives
+   at the corresponding position (0 indexed) on the reference genome.
+   The object also provides methods for appending, inserting and
+   deleting based upon instructions in the variants input file.
+
+   append_segment(sequence)
+
+      Append the given sequence segment to the custom genome.  Since
+      the sequence segment either has a one to one correspondence with
+      that of reference genome or is a sequence segment drawn from the
+      reference genome; execution of this method does not alter the
+      current position of the custom genome relative to the current
+      position of the reference genome/variant.  So position advances
+      by the sequence segment length but offset remains unchangeed.
+      :param sequence: sequence segment to append
+
+   delete_segment(length)
+
+      Skip over (delete) a length of the reference sequence.  Since
+      the reference sequence is advancing while the custom sequence is
+      not, the relative current position of the genome again changes
+      relative to the current position of the reference sequence.  As
+      such, the current genome position does not advance but the
+      offset increases by the length provided. :param length: number
+      of bases in the reference sequence to skip over.
+
+   insert_segment(sequence)
+
+      Insert the given sequence segment into the custom genome.  Since
+      the given sequence segment does not correspond to anything in
+      the reference genome; the current position of the custom genome
+      relative to the current position of the reference genome/variant
+      does change by the length of the sequence segment.  Since the
+      custom genome sequence is advancing while the reference sequence
+      is not, the sequence segment length is subtracted from the
+      offset while the genome current position is advanced by the
+      length of the sequence segment. :param sequence: sequence
+      segment to insert
+
+   save_to_file()
+
+      Saves the custom genome sequence into a single line of a fasta
+      file.  The genome name is suffixed to the given output filename
+      steam.  Since the genome sequence data is saved one chromosome
+      at a time, the output file is appended to.  That means that the
+      output file should be empty when the first chromosome sequence
+      is added.  Since the sequence is memory is closed at this time,
+      this genome can no longer be modified.
+
+class camparee.genome_builder.GenomeBuilderStep(log_directory_path, data_directory_path, parameters={})
+
+   build_sequence_from_variant(genome, variant, reference_base)
+
+      Applies the variant provided to the custom genome provided in
+      accordance with the variant's format (e.g., D indicates delete
+      followed by number of bases to delete, I indicates insert
+      followed by bases to insert, and no D or I indicates a single
+      base change. :param genome: custom genome to which the variant
+      is applied :param variant: variant to apply :param
+      reference_base:  base to use in place of indels when the option
+      to ignore indels is selected.
+
+   execute(sample, chr_ploidy_data, reference_genome, chromosome_list=None)
+
+      Entry point for genome builder.  Uses the chr_ploidy_data and
+      reference_genome resources along with beagle and variant finder
+      output to build two custom genomes. :param sample: sample for
+      which the genome is being built :param chr_ploidy_data:
+      dictionary indicating chromosomes to be processed and their
+      ploidy based on sample gender. :param reference_genome:
+      dictionary relating chr to its reference sequence :param
+      chromosome_list: a debug feature that overrides the
+      chr_ploidy_data chr list.  Useful for testing a specific
+      chromosome only or a small subset of chromosomes.
+
+   get_commandline_call(sample, chr_ploidy_file_path, reference_genome_file_path, chromosome_list=None)
+
+      Prepare command to execute the GenomeBuilderStep from the
+      command line, given all of the arugments used to run the
+      execute() function.
+
+      Parameters:
+         * **sample** (*Sample*) -- Sample for which to construct
+           parental genomes
+
+         * **chr_ploidy_file_path** (*string*) -- File that maps
+           chromosome names to their male/female ploidy.
+
+         * **reference_genome_file_path** (*string*) -- File that
+           maps chromosome names in reference to nucleotide sequence.
+
+         * **chromosome_list** (*list*) -- A debug feature that
+           overrides the chr_ploidy_data chr list. Useful for testing
+           a specific chromosome only or a small subset of
+           chromosomes.
+
+      Returns:
+         Command to execute on the command line. It will perform the
+         same operations as a call to execute() with the same
+         parameters.
+
+      Return type:
+         string
+
+   get_missing_chr_list()
+
+      Return a list of those chromosomes from chr_ploidy_data that are
+      missing for the sample's gender.  If no sample gender is
+      specified, only return a list of chromosomes from
+      chr_ploidy_data where the chromosomes are missing for both
+      genders (unlikely scenario). :return: list of chromosomes that
+      are missing for this sample (likely owing to its gender)
+
+   get_paired_chr_list()
+
+      Return a list of those chromosomes from chr_ploidy_data that are
+      paired for the sample's gender.  If no sample gender is
+      specified, only return a list of chromosomes from
+      chr_ploidy_data where the chromosomes are paired for both
+      genders. :return: list of chromosomes that are paired for this
+      sample (likely owing to its gender)
+
+   get_unpaired_chr_list()
+
+      Return a list of those chromosomes from chr_ploidy_data that are
+      unpaired for the sample's gender.  If no sample gender is
+      specified, only return a list of chromosomes from
+      chr_ploidy_data where the chromosomes are unpaired for both
+      genders. :return: list of chromosomes that are unpaired for this
+      sample (likely owing to its gender)
+
+   get_unpaired_chr_variant_data()
+
+      There should be at most, one variant for any given position in
+      an unpaired chromosome.  This method groups the variant records
+      by chromosome for those chromosomes found in the unpaired chr
+      list and adds a single instance variant to the an
+      unpaired_chr_variants list for every such variant found and
+      returns the list. :return: A list of all unpaired chromosome
+      variants
+
+   get_validation_attributes(sample, chr_ploidy_file_path, reference_genome_file_path, chromosome_list=None)
+
+      Prepare attributes required by is_output_valid() function to
+      validate output generated the GenomeBuilderStep job
+      corresponding to the given sample.
+
+      Parameters:
+         * **sample** (*Sample*) -- Sample for which custom parental
+           genomes will be generated.
+
+         * **chr_ploidy_file_path** (*string*) -- File that maps
+           chromosome names to their male/female ploidy. [Note: this
+           parameter is captured just so get_validation_attributes()
+           accepts the same arguments as get_commandline_call(). It is
+           not used here.]
+
+         * **reference_genome_file_path** (*string*) -- File that
+           maps chromosome names in reference to nucleotide sequence.
+           [Note: this parameter is captured just so
+           get_validation_attributes() accepts the same arguments as
+           get_commandline_call(). It is not used here.]
+
+         * **chromosome_list** (*list*) -- A debug feature that
+           overrides the chr_ploidy_data chr list. Useful for testing
+           a specific chromosome only or a small subset of
+           chromosomes. [Note: this parameter is captured just so
+           get_validation_attributes() accepts the same arguments as
+           get_commandline_call(). It is not used here.]
+
+      Returns:
+         A GenomeBuilderStep job's data_directory, log_directory,
+         sample_id, and a list of the genome names used by the
+         GenomeBuilderStep to refer to each of the parental genomes
+         (i.e. 1 and 2 for male and female parent, respectively).
+
+      Return type:
+         dict
+
+   static group_data(lines, group_function)
+
+      Returns data grouped by the provided function :param lines:  the
+      lines of data to be grouped :param group_function: The function
+      to apply to determine the groupping. :return: a generator
+      providing the next key (the groupping parameter) and the
+      groupped data as a list.
+
+   static is_output_valid(validation_attributes)
+
+      Check if output of GenomeBuilderStep for a specific
+      job/execution is correctly formed and valid, given a job's data
+      directory, log directory, and sample id. Prepare these
+      attributes for a given sample's jobs using the
+      get_validation_attributes() method.
+
+      Parameters:
+         **validation_attributes** (*dict*) -- A job's data_directory,
+         log_directory, sample_id, and the list of genome names used
+         by the GenomeBuilderStep to refer to each of the parental
+         genomes (i.e. 1 and 2 for male and female parent,
+         respectively).
+
+      Returns:
+         True  - GenomeBuilderStep output files were created and are
+         well formed. False - GenomeBuilderStep output files do not
+         exist or are missing data.
+
+      Return type:
+         boolean
+
+   locate_sample()
+
+      Find the position of the sample in the beagle data :return: The
+      position of the sample in a line of beagle data
+
+   static main()
+
+      Entry point into script. Allows script to be executed/submitted
+      via the command line.
+
+   make_paired_chromosome(chromosome, sample_index)
+
+      Here, the beagle data for the given sample is threaded together
+      with the reference sequence to create a custom sequence for the
+      given chromosome.  Below is a snippet of a beagle vcf file for 6
+      samples along with a header.
+
+      #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO
+      FORMAT  sample1 sample2 sample3 sample4 sample5 sample6 ... chr1
+      257558  .       A       G       .       PASS    .       GT
+      0|1     0|0     0|0     0|0     0|0     0|0 chr1    257559  .
+      G       C,GAG   .       PASS    .       GT      0|1     0|2
+      0|0     0|0     0|0     0|0 chr1    257560  .       C       A
+      .       PASS    .       GT      1|0     1|0     0|0     1|0
+      0|0     0|0 chr1    257570  .       C       CAA,CA  .       PASS
+      .       GT      1|0     0|0     0|0     0|0     0|1     2|0
+
+      Parameters:
+         * **chromosome** -- The chromosome for which the reference
+           sequence is altered by beagle data.
+
+         * **sample_index** -- identifies the position of the
+           subject sample in the beagle data.
+
+   make_reference_chromosome(chromosome)
+
+      Here, the reference sequence for the given chromosome is copied
+      as it, into the custom genomes. :param chromosome: The
+      chromosome for which the reference sequence is used.
+
+   make_unpaired_chromosome(chromosome)
+
+      Here, the samples variants data is threaded together with the
+      reference sequence to create a custom sequence for the given
+      chromosome. :param chromosome: The chromosome for which the
+      reference sequence is altered by variant data.
+
+   validate()
+
+      Checks validity of parameters used to instantiate the CAMPAREE
+      step.
+
+      Returns:
+         True  - All parameters required to run this step were
+         provided and
+            are within valid ranges.
+
+         False - One or more of the paramters is missing or contains
+         an invalid
+            value.
+
+      Return type:
+         boolean
+
+class camparee.genome_builder.SingleInstanceVariant(chromosome, position, description)
+
+   chromosome
+
+      Alias for field number 0
+
+   description
+
+      Alias for field number 2
+
+   position
+
+      Alias for field number 1
+
+
+Annotation Updater
+******************
+
+class camparee.update_annotation_for_genome.UpdateAnnotationForGenomeStep(log_directory_path, data_directory_path, parameters={})
+
+   Updates a gene annotation's coordinates to account for insertions &
+   deletions (indels) introduced by GenomeFilesPreparation when it
+   creates variant genomes. Note, this is designed to update
+   annotation for a single variant genome at a time.
+
+   Parameters:
+      * **genome_indel_filename** (*string*) --
+
+        Path to file containing list of indel locations generated by
+        the GenomeFilesPreparation. This file has no header and
+        contains three, tab-delimited colums (example):
+
+           1:134937    D       2 1:138813    I       1
+
+        First column = Chromosome and coordinate of indel in the
+        original
+           reference genome. Note, coordinate is zero-based.
+
+        Second column = "D" if variant is a deletion, "I" if variant
+        is an
+           insertion.
+
+        Third column = Length in bases of indel.
+
+      * **input_annot_filename** (*string*) --
+
+        Path to file containing gene/transcript annotations using
+        coordinates to the original reference genome. This file should
+        have 11, tab-delimited columns and includes a header
+        (example):
+
+           chrom  strand  txStart  txEnd exonCount  exonStarts
+           exonEnds           transcriptID     geneID
+           geneSymbol  biotype 1      +       11869    14409 3
+           11869,12613,13221  12227,12721,14409  ENST00000456328
+           ENSG00000223972  DDX11L1     pseudogene
+
+        An annotation file with this format can be generated from a
+        GTF file using the convert_gtf_to_annot_file_format() function
+        in the Utils package. A template for this annotation format is
+        available in the class variable Utils.annot_output_format.
+
+      * **updated_annot_filename** (*string*) -- Path to the output
+        file containing gene/transcript annotations with coordinates
+        updated to match the variant genome.
+
+      * **log_filename** (*string*) -- Path to the log file.
+
+   execute(sample, genome_indel_suffix, input_annot_file_path, chr_ploidy_file_path)
+
+      Main work-horse function that generates the updated annotation.
+
+         Parameters
+
+      genome_indel_suffix : int
+         Suffix to apply to obtain proper genome indel file. Should be
+         1 or 2.
+
+      input_annot_filename : string
+         Full path to annotation file with coordinates for reference
+         genome.
+
+   get_commandline_call(sample, genome_indel_suffix, input_annot_file_path, chr_ploidy_file_path)
+
+      Prepare command to execute the UpdateAnnotationForGenomeStep
+      from the command line, given all of the arugments used to run
+      the execute() function.
+
+      Parameters:
+         * **sample** (*Sample*) -- Sample for which to update
+           annotation to parental genomes
+
+         * **genome_indel_suffix** (*string*) -- Suffix to apply to
+           obtain proper genome indel file. This suffix is also used
+           in the name of the updated annotation file.
+
+         * **input_annot_file_path** (*string*) -- Full path to
+           annotation file with coordinates for reference genome.
+
+         * **chr_ploidy_file_path** (*string*) -- File that maps
+           chromosome names to their male/female ploidy.
+
+      Returns:
+         Command to execute on the command line. It will perform the
+         same operations as a call to execute() with the same
+         parameters.
+
+      Return type:
+         string
+
+   get_validation_attributes(sample, genome_indel_suffix, input_annot_file_path, chr_ploidy_file_path)
+
+      Prepare attributes required by is_output_valid() function to
+      validate output generated the UpdateAnnotationForGenomeStep job
+      corresponding to the given sample.
+
+      Parameters:
+         * **sample** (*Sample*) -- Sample for which to update
+           annotation to parental genomes
+
+         * **genome_indel_suffix** (*string*) -- Suffix to apply to
+           obtain proper genome indel file. This suffix is also used
+           in the name of the updated annotation file.
+
+         * **input_annot_file_path** (*string*) -- Full path to
+           annotation file with coordinates for reference genome.
+
+         * **chr_ploidy_file_path** (*string*) -- File that maps
+           chromosome names to their male/female ploidy.
+
+      Returns:
+         A UpdateAnnotationForGenomeStep job's data_directory,
+         log_directory, sample_id, and the suffix used when building
+         the updated genome sequence.
+
+      Return type:
+         dict
+
+   static is_output_valid(validation_attributes)
+
+      Check if output of UpdateAnnotationForGenomeStep for a specific
+      job/ execution is correctly formed and valid, given a job's data
+      directory, log directory, and sample id. Prepare these
+      attributes for a given sample's jobs using the
+      get_validation_attributes() method.
+
+      Parameters:
+         **validation_attributes** (*dict*) -- A job's data_directory,
+         log_directory, sample_id, and the suffix used when building
+         the updated genome sequence.
+
+      Returns:
+         True  - UpdateAnnotationForGenomeStep output files were
+         created and
+            are well formed.
+
+         False - UpdateAnnotationForGenomeStep output files do not
+         exist or
+            are missing data.
+
+      Return type:
+         boolean
+
+   static main()
+
+      Entry point into script when called directly.
+
+      Parses arguments, gathers input and output filenames, and calls
+      scripts that perform the actual operation.
+
+   validate()
+
+      Checks validity of parameters used to instantiate the CAMPAREE
+      step.
+
+      Returns:
+         True  - All parameters required to run this step were
+         provided and
+            are within valid ranges.
+
+         False - One or more of the paramters is missing or contains
+         an invalid
+            value.
+
+      Return type:
+         boolean
+
+
+Annotation Info
+***************
+
+class camparee.annotation_info.AnnotationInfo(geneinfo_file_path, chrom_lengths, flank_size=1500)
+
+   Data structure containing all the information in a gene info file.
+
+   Stores genes, transcripts, intergenic regions, and exons both for
+   easy access by ID and for quick lookup by position, using sorted
+   lists by start position, allowing binary search.
+
+   add_flanks(flank_size)
+
+      Add flanks to each genic region up to size flank_size on each
+      end These account for reads that go past the "ends" of the gene
+      but should be thought of as belonging to that gene rather than
+      to intergenic regions. Flanks are added as first/last introns to
+      every transcript, so all transcripts will have at least two
+      introns. Sometimes there is no room for a flank to be added, in
+      which case the flank is given start/stop coordinates of 0,0.
+
+      Parameters:
+         **flank_size** -- Size of flanks to add
+
+      Returns:
+         flanked_genics, dictionary of genic regions, sorted by start
+         position with flanks added
+
+class camparee.annotation_info.Gene(info, gene_id, chrom, strand, start, end, transcripts=None)
+
+   Representation of a gene, including it's transcripts.
+
+   start, end coordinates indicate the min/max of the start/end
+   coordinates of all its transcripts
+
+class camparee.annotation_info.Intron(*args)
+
+class camparee.annotation_info.Mintron(info, *args)
+
+class camparee.annotation_info.Region(info, chrom, strand, start, end, comment=None)
+
+   Any genomic span of a chromosome strand = +,-, or . if not strand-
+   specific region (eg: an intergenic region) 'comment' is any extra
+   information to carry along, for the purposes of debugging/printing
+
+class camparee.annotation_info.Transcript(info, gene_id, transcript_id, chrom, strand, start, end, exons=None, introns=None)
+
+   Transcript of a gene, tracks its introns, exons
+
+class camparee.annotation_info.TranscriptRegion(info, gene_id, transcript_id, *args)
+
+   Region that is part of a transcript (eg: intron or exon)
+
+
+Transcriptome Preparation
+*************************
+
+Module containing a rough draft of transcriptome preparation
+including:
+   1. creation of transcriptome fasta files from genome fasta files
+      and annotations
+
+   2. creation of STAR indexes for transcriptomes
+
+   3. alignment of fastq files to STAR indexes
+
+   4. Quantification at transcript and allele levels
+
+   5. Expression of molecules based on quantifications
+
+Runs these tasks in parallel through bsub
+
+class camparee.transcriptomes.TranscriptQuantificatAndMoleculeGenerationStep(log_directory_path, data_directory_path, parameters={})
+
+   execute(sample, kallisto_file_path, bowtie2_dir_path, output_type, output_molecule_count, seed=None)
+
+      Entry point into the CAMPAREE step.
+
+   get_commandline_call(sample, kallisto_file_path, bowtie2_dir_path, output_type, output_molecule_count, seed=None)
+
+      Prepare command to execute the step from the command line, given
+      all of the parameters used to call the execute() method.
+
+      Parameters:
+         **same**** or ****equivalent parameters given to the
+         execute****(****) ****method.** (*The*) --
+
+      Returns:
+         Command to execute on the command line. It will perform the
+         same operations as a call to execute() with the same
+         parameters.
+
+      Return type:
+         string
+
+   get_validation_attributes(sample, kallisto_file_path, bowtie2_dir_path, output_type, output_molecule_count, seed=None)
+
+      Prepare attributes required by the is_output_valid() method to
+      validate output generated by executing this specific instance of
+      the pipeline step (either through the command line call or the
+      execute method).
+
+      Returns:
+         Key-value pairings of attributes accepted by the
+         is_output_valid() method.
+
+      Return type:
+         dict
+
+   static is_output_valid(validation_attributes)
+
+      Check if output of this step, for a specific job/execution is
+      correctly formed and valid, given the dictionary of valdiation
+      attributes. Prepare these attributes for a given executing by
+      calling the get_validation_attributes() method.
+
+      Parameters:
+         **validation_attributes** (*dict*) -- Key-value pairings of
+         attributes generated by the get_validation_attributes()
+         method.
+
+      Returns:
+         True  - Output files for this step were created and are well
+         formed. False - Output files for this steo do not exist or
+         are missing data.
+
+      Return type:
+         boolean
+
+   static main()
+
+      Entry point into script. Allows script to be executed/submitted
+      via the command line.
+
+   validate()
+
+      Checks validity of parameters used to instantiate the CAMPAREE
+      step.
+
+      Returns:
+         True  - All parameters required to run this step were
+         provided and
+            are within valid ranges.
+
+         False - One or more of the paramters is missing or contains
+         an invalid
+            value.
+
+      Return type:
+         boolean
+
+
+Allelic Imbalance Quantification
+********************************
+
+class camparee.allelic_imbalance_quant.AllelicImbalanceQuantificationStep(sample_directory, sample)
+
+   This class contains scripts to output quantification of allelic
+   imbalance
+
+   create_transcript_gene_map()
+
+      Create dictionary to map transcript id to gene id using geneinfo
+      file Map '*' to '*' to account for unmapped reads in align_file
+      Create entries with suffix '_1' and '_2' for each transcript
+
+   static main()
+
+      Entry point into script. Parses the argument list to obtain all
+      the files needed and feeds them to the class constructor. Calls
+      the appropriate scripts thereafter.
+
+   quantify_allelic_imbalance()
+
+      This is the main step which quantifies allelic imbalance for all
+      genes in the annotation based on the aligned files for parents 1
+      and 2.
+
+   read_info(in_align_filename)
+
+      Create dictionary which maps a read id in SAM file to a
+      dictionary with two keys 'transcript_id' and 'NM'. The value
+      associated with 'transcript_id' is a list of all transcripts the
+      read aligned to. The value associated with 'NM' is the
+      corresponding edit distance information for each alignment. For
+      non-mappers the transcript_id is '*' and edit distance is 100
+      (Make it read length).
+
+
+Molecule Maker
+**************
+
+class camparee.molecule_maker.MoleculeMaker(sample, sample_directory)
+
+   MoleculeMaker generates molecules based off of gene, intron, and
+   allelic quantification files as well as customized genomic sequence
+   and annotation
+
+   convert_genome_position_to_reference(position, chrom, allele)
+
+      Convert (1-indexed) position into the current (custom) genome
+      into a position relative to the reference genome
+
+   get_reference_cigar(start, end, chrom, allele)
+
+      Returns the cigar string for the part of the custom chromosome
+      on the segment from  start to end (inclusive, one based)
+      relative to the reference genome
+
+   load_allelic_quants(file_path)
+
+      Reads allelic quantification file into a dictionary: gene_id ->
+      (allele 1 probability, allele 2 probability)
+
+   load_gene_quants(file_path)
+
+      Read in a gene quantification file as two lists of gene IDs and
+      of their read quantifications
+
+   load_genome(file_path)
+
+      Read in a fasta file and load is a dictionary id -> sequence
+
+   load_indels(file_path)
+
+      Read in the file of indel locations for a given custom genome
+
+      Store it as a dictionary chrom -> (indel_starts, indel_data)
+      where indel_starts is a numpy array of start locations of the
+      indels (i.e. 1 based coordinates of the base in the custom
+      genome where the insertion/deletion occurs immediately after)
+      and indel_data is a list of tuples (indel_start, indel_type,
+      indel_length) where indel_type is 'I' or 'D'
+
+      The indel file is tab-separated with format "chrom:start type
+      length"  and looks like the following: 1:4897762       I       2
+      1:7172141       I       2 1:7172378       D       1
+
+      Assumption is that the file is sorted by start and no indels
+      overlap
+
+      Moreover, return a dictionary chrom -> (offset_starts,
+      offset_values) where offset_starts is as indel_starts, a sorted
+      numpy array with indicating the positions where the offset (i.e.
+      custom_genome_position - reference_genome_position values)
+      change and offset_values is a list in the same order indicating
+      these values. Note that the offset value is to be used for all
+      bases AFTER the offset position, not on that base
+
+   load_intron_quants(file_path)
+
+      Load an intron quantification file as two dictionaries,
+      (transcript ID -> sum FPK of all introns in transcript) and
+      (transcript ID -> list of FPKs of each intron in transcript)
+
+   load_isoform_quants(file_path)
+
+      Reads an isoform quant file into a dictionary gene -> (list of
+      transcript IDs, list of psi values)
+
+   load_transcriptome(file_path)
+
+      Read in a fasta file and load is a dictionary id -> sequence
+      assumed one-line for the whole contig
+
+   make_molecule_file(filepath, N=10000)
+
+      Write out molecules to a tab-separated file
+
+      Note: we write out a molecules start and cigar relative to the
+      appropriate custom genome, either _1 or _2 as per the transcript
+      id
+
+
+Camparee Utils
+**************
+
+exception camparee.camparee_utils.CampareeException
+
+   Base class for other Camparee exceptions.
+
+class camparee.camparee_utils.CampareeUtils
+
+   Utilities for steps in the CAMPAREE expression pipeline.
+
+   static convert_gtf_to_annot_file_format(gtf_filename)
+
+      Convert a GTF file to a tab-delimited annotation file with one
+      line per transcript. Each line in the annotation file will have
+      the following columns:
+
+            1 - chrom 2 - strand 3 - txStart 4 - txEnd 5 - exonCount 6
+            - exonStarts 7 - exonEnds 8 - transcript_id 9 - gene_id
+
+         10 - genesymbol 11 - biotype
+
+      This method derives transcript info from the "exon" lines in the
+      GTF file and assumes the exons are listed in the order they
+      appear in the transcript, as opposed to their genomic
+      coordinates. The annotation file will list exons in order by
+      plus-strand coordinates, so this method reverses the order of
+      exons for all minus-strand transcripts.
+
+      Note, this function will add a header to the output file, marked
+      by a '#' character prefix.
+
+      See website for standard 9-column GTF specification:
+      https://useast.ensembl.org/info/website/upload/gff.html
+
+      Parameters:
+         **gtf_filename** (*string*) -- Path to GTF file to be
+         converted annotation file format.
+
+      Returns:
+         Name of the annotation file produced from the GTF file.
+
+      Return type:
+         string
+
+   static create_chr_ploidy_data(chr_ploidy_file_path)
+
+      Parses the chr_ploidy_data from its tab delimited resource file
+      into a dictionary of dictionaries like so: {
+
+         '1': {'male': 2, 'female': 2}, 'X': {'male': 1, 'female': 2}.
+         ...
+
+      } :param chr_ploidy_file_path: full path to the chr_ploidy data
+      file :return: chr_ploidy_data expressed as a dictionary of
+      dictionary as shown above.
+
+   static create_genome(genome_file_path)
+
+      Creates a genome dictionary from the genome file located at the
+      provided path (if compressed, it must have a gz extension).  The
+      filename is assumed to contain the chr sequences without line
+      breaks. :param genome_file_path: path to reference genome file
+      (either compressed or not) :return: genome as a dictionary with
+      the chromosomes/contigs as keys and the sequences as values.
+
+   static edit_reference_genome(reference_genome_file_path, edited_reference_genome_file_path)
+
+      Helper method to convert a reference genome file containing line
+      breaks embedded within its sequences to a reference genome file
+      containing each seqeuence on a single line. :param
+      reference_genome_file_path: Path to reference geneome file
+      having multi-line sequence data :param
+      edited_reference_genome_file_path: Path to reference genome file
+      to create with single line sequence data.
+
+   static parse_variant_line(line)
+
+      reads a line of a variant file from CAMPAREE
+
+exception camparee.camparee_utils.CampareeUtilsException
+
+   Base class for Camparee Utils exceptions.

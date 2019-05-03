@@ -181,4 +181,4 @@ epub_exclude_files = ['search.html']
 
 # Don't actually install and build the following dependencies:
 # Good for ReadTheDocs support
-autodoc_mock_imports = ["pysam"]
+autodoc_mock_imports = ["pysam", "beers_utils"]
