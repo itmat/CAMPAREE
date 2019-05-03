@@ -90,3 +90,25 @@ When the run completes, output will be created in `CAMPAREE/test_data/results/ru
 The final outputs will be in the text files `test_data/results/run_1/CAMPAREE/data/sample1/molecule_file` and  `test_data/results/run_1/CAMPAREE/data/sample2/molecule_file`.
 Each line (after the header line) corresponds to a sequence of a single molecule in a tab-separated format.
 The default config file outputs 10000 molecules.
+
+## Packaged Software
+
+CAMPAREE includes (in the third_party_software/ directory) binary executables from the following pieces of software. Please cite the listed papers when using CAMPAREE.
+
+- STAR
+    * Version: 2.5.2a
+    * Source code: https://github.com/alexdobin/STAR/tree/2.5.2a
+    * Citation: Dobin A, Davis CA, Schlesinger F, et al. STAR: ultrafast universal RNA-seq aligner. *Bioinformatics*. 2013 Jan 1;29(1):15-21. doi: 10.1093/bioinformatics/bts635
+- BEAGLE
+    * Version: 5.0 (28Sep18.793)
+    * Source code: https://faculty.washington.edu/browning/beagle/beagle.html
+    * Citation:
+        Browning SR, Browning BL. Rapid and accurate haplotype phasing and missing data inference for whole genome association studies by use of localized haplotype clustering. *Am J Hum Genet*. 2007 Nov;81(5):1084-97. doi:10.1086/521987
+- Kallisto
+    * Version: 0.45.0
+    * Source code: https://github.com/pachterlab/kallisto/tree/v0.45.0
+    * Citation: Bray NL, Pimentel H, Melsted P, Pachter L. Near-optimal probabilistic RNA-seq quantification. *Nat Biotechnol*. 2016 May;34(5):525-7. doi: 10.1038/nbt.3519
+- Bowtie2
+    * Version: 2.3.4.3
+    * Source code: https://github.com/BenLangmead/bowtie2/tree/v2.3.4.3
+    * Citation: Langmead B, Salzberg S. Fast gapped-read alignment with Bowtie 2. *Nat Methods*. 2012 Mar 4;9(4):357-9. doi: 10.1038/nmeth.1923
