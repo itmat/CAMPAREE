@@ -8,6 +8,10 @@ For each sample, CAMPAREE outputs a simulated set of RNA transcripts mimicking e
 It also outputs simulated diploid genomes and their corresponding annotations with phased SNP and indel calls in the transcriptome from fastq reads.
 Additionally the simulation outputs the underlying distributions used for expressing the transcripts.
 
+## Documentation
+
+Our documentation is on [ReadTheDocs](https://camparee.readthedocs.io).
+
 ## Quick Start Guide
 
 This guide will walk you through basic installation and useage of CAMPAREE running a simulation on a simplified dataset consisting of a mouse genome truncated to about 6 million bases and two samples of reads that align there.
