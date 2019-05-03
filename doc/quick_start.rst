@@ -7,6 +7,7 @@ Installation
 ------------
 
 Make sure you have the following installed on your system:
+
 - git
 - python version 3.6
 - Java 1.8
@@ -62,7 +63,7 @@ To perform the test run with these defaults run::
     bin/run_camparee.py -c config/baby.config.yaml -r 1
 
 The argument ``-r 1`` indicates that the run number is 1.
-If you run this again, you must either remove the output directory ``_run1/`` or specify a new run number.
+If you run this again, you must either remove the output directory ``test_data/results/run_1/`` or specify a new run number.
 
 It is also possible to test deployment to a cluster.
 For LSF clusters run::
@@ -76,7 +77,7 @@ For SGE clusters run::
 Check Results
 -------------
 
-When the run completes, output will be created in ``CAMPAREE/test_data/results/_run1/``.
-The final outputs will be in the text files ``test_data/results/_run1/CAMPAREE/data/sample1/molecule_file`` and  ``test_data/results/_run1/CAMPAREE/data/sample2/molecule_file``.
+When the run completes, output will be created in ``CAMPAREE/test_data/results/run_1/``.
+The final outputs will be in the text files ``test_data/results/run_1/CAMPAREE/data/sample1/molecule_file`` and  ``test_data/results/run_1/CAMPAREE/data/sample2/molecule_file``.
 Each line (after the header line) corresponds to a sequence of a single molecule in a tab-separated format.
 The default config file outputs 10000 molecules.
