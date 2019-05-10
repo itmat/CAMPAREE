@@ -112,3 +112,7 @@ CAMPAREE includes (in the third_party_software/ directory) binary executables fr
     * Version: 2.3.4.3
     * Source code: https://github.com/BenLangmead/bowtie2/tree/v2.3.4.3
     * Citation: Langmead B, Salzberg S. Fast gapped-read alignment with Bowtie 2. *Nat Methods*. 2012 Mar 4;9(4):357-9. doi: 10.1038/nmeth.1923
+
+## Funding
+
+Work on CAMPAREE is supported by R21-LM012763-01A1: “The Next Generation of RNA-Seq Simulators for Benchmarking Analyses” (PI: Gregory R. Grant).
