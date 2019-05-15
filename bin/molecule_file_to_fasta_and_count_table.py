@@ -9,6 +9,11 @@ and completely unspliced pre-mRNA (contain all introns). It might still work wit
 molecule files that contain molecule-specific edits or splicing events, but it
 was not designed to work specifically in this scenario.
 
+Note, while a molecule file contains start coordinates and cigar strings mapping
+a transcript molecule back to both the custom genome and the original reference
+genome, but the transcript headers for each FASTA file only include the information
+for the reference.
+
 """
 
 import argparse
@@ -51,21 +56,25 @@ class MoleculeFileToFastaAndCountTable():
             for molecule in input_molecule_file:
                 molecule_data = molecule.rstrip().split("\t")
                 transcript_id = molecule_data[0]
-                transcript_seq = molecule_data[5]
-                transcript_cigar = molecule_data[3]
-                transcript_strand = molecule_data[4]
+                transcript_chr = molecule_data[1]
+                # custom_genome_start = molecule_data[2]
+                # custom_genome_cigar = molecule_data[3]
+                ref_genome_start = molecule_data[4]
+                ref_genome_cigar = molecule_data[5]
+                transcript_strand = molecule_data[6]
+                transcript_seq = molecule_data[7]
 
                 if trim_polya_tails:
                     trimmed_seq, trimmed_cigar = self._trim_tail_and_cigar(transcript_seq,
-                                                                           transcript_cigar,
+                                                                           ref_genome_cigar,
                                                                            transcript_strand)
                     transcript_seq = trimmed_seq
-                    transcript_cigar = trimmed_cigar
+                    ref_genome_cigar = trimmed_cigar
 
                 if not counts_by_transcript.get(transcript_id, None):
                     counts_by_transcript[transcript_id] = 1
                     sequences_by_transcript[transcript_id] = transcript_seq
-                    molecule_metadata = [molecule_data[1], molecule_data[2], transcript_cigar, transcript_strand]
+                    molecule_metadata = [transcript_chr, ref_genome_start, ref_genome_cigar, transcript_strand]
                     fasta_headers_by_transcript[transcript_id] = f">{transcript_id} {';'.join(molecule_metadata)}"
                 else:
                     counts_by_transcript[transcript_id] += 1
