@@ -35,6 +35,11 @@ CampareeConstants = namedtuple('Constants',
                                 'TXQUANT_OUTPUT_GENE_FILENAME',
                                 'TXQUANT_OUTPUT_PSI_FILENAME',
                                 'TXQUANT_LOG_FILENAME',
+                                'BOWTIE2_INDEX_DIR_PATTERN',
+                                'BOWTIE2_INDEX_PREFIX_PATTERN',
+                                'BOWTIE2_INDEX_LOG_FILENAME_PATTERN',
+                                'BOWTIE2_ALIGN_FILENAME_PATTERN',
+                                'BOWTIE2_ALIGN_LOG_FILENAME_PATTERN',
                                 'TRANSCRIPTOMES_LOG_FILENAME'])
 
 CampareeConstants.__doc__ = """
@@ -112,6 +117,19 @@ CAMPAREE_CONSTANTS = \
                       TXQUANT_OUTPUT_PSI_FILENAME="isoform_psi_value_quantifications.txt",
                       # Name of file where TranscriptGeneQuantificationStep logging is stored
                       TXQUANT_LOG_FILENAME="TranscriptGeneQuantificationStep.log",
+                      # Name of directory to store Bowtie2 index files. Note, right now this
+                      # is the same as kallisto index directory. Maintaining both of these as
+                      # separate variables, so Bowtie2 and kallisto indexes can be stored in
+                      # different directories.
+                      BOWTIE2_INDEX_DIR_PATTERN='transcriptome_{genome_name}_index',
+                      # Prefix used by Bowtie2 when naming/creating all index files
+                      BOWTIE2_INDEX_PREFIX_PATTERN='transcriptome_{genome_name}',
+                      # Name of file where Bowtie2IndexStep logging is stored
+                      BOWTIE2_INDEX_LOG_FILENAME_PATTERN='Bowtie2IndexStep_{genome_name}.log',
+                      # Name of file where Bowtie2 alignment results are stored
+                      BOWTIE2_ALIGN_FILENAME_PATTERN='Bowtie2_transcriptome_alignment_{genome_name}.sam',
+                      # Name of file where Bowtie2AlignStep logging is stored
+                      BOWTIE2_ALIGN_LOG_FILENAME_PATTERN='Bowtie2AlignStep_{genome_name}.log',
                       TRANSCRIPTOMES_LOG_FILENAME="TranscriptQuantificatAndMoleculeGenerationStep.log"
                      )
 
