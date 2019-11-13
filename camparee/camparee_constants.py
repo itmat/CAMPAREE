@@ -40,6 +40,8 @@ CampareeConstants = namedtuple('Constants',
                                 'BOWTIE2_INDEX_LOG_FILENAME_PATTERN',
                                 'BOWTIE2_ALIGN_FILENAME_PATTERN',
                                 'BOWTIE2_ALIGN_LOG_FILENAME_PATTERN',
+                                'ALLELIC_IMBALANCE_OUTPUT_FILENAME',
+                                'ALLELIC_IMBALANCE_LOG_FILENAME',
                                 'TRANSCRIPTOMES_LOG_FILENAME'])
 
 CampareeConstants.__doc__ = """
@@ -130,6 +132,10 @@ CAMPAREE_CONSTANTS = \
                       BOWTIE2_ALIGN_FILENAME_PATTERN='Bowtie2_transcriptome_alignment_{genome_name}.sam',
                       # Name of file where Bowtie2AlignStep logging is stored
                       BOWTIE2_ALIGN_LOG_FILENAME_PATTERN='Bowtie2AlignStep_{genome_name}.log',
+                      # Name of file where allelic imbalance distribution stored
+                      ALLELIC_IMBALANCE_OUTPUT_FILENAME="allelic_imbalance_quantifications.txt",
+                      # Name of file where AllelicImbalanceQuantificationStep logging is stored
+                      ALLELIC_IMBALANCE_LOG_FILENAME="AllelicImbalanceQuantificationStep.log",
                       TRANSCRIPTOMES_LOG_FILENAME="TranscriptQuantificatAndMoleculeGenerationStep.log"
                      )
 
