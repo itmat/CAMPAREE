@@ -42,6 +42,10 @@ CampareeConstants = namedtuple('Constants',
                                 'BOWTIE2_ALIGN_LOG_FILENAME_PATTERN',
                                 'ALLELIC_IMBALANCE_OUTPUT_FILENAME',
                                 'ALLELIC_IMBALANCE_LOG_FILENAME',
+                                'MOLECULE_MAKER_OUTPUT_OPTIONS_W_EXTENSIONS',
+                                'MOLECULE_MAKER_OUTPUT_FILENAME_PATTERN',
+                                'MOLECULE_MAKER_DEFAULT_NUM_MOLECULES_PER_PACKET',
+                                'MOLECULE_MAKER_LOG_FILENAME',
                                 'TRANSCRIPTOMES_LOG_FILENAME'])
 
 CampareeConstants.__doc__ = """
@@ -136,6 +140,17 @@ CAMPAREE_CONSTANTS = \
                       ALLELIC_IMBALANCE_OUTPUT_FILENAME="allelic_imbalance_quantifications.txt",
                       # Name of file where AllelicImbalanceQuantificationStep logging is stored
                       ALLELIC_IMBALANCE_LOG_FILENAME="AllelicImbalanceQuantificationStep.log",
+                      # Dictionary mapping the options for molecule output type, to the
+                      # extension of the output file. Note: the keys are used to validate
+                      # the output type entered in the config file.
+                      MOLECULE_MAKER_OUTPUT_OPTIONS_W_EXTENSIONS={"file": "txt", "packet": "pickle"},
+                      # Name of files where molecule representations are stored.
+                      MOLECULE_MAKER_OUTPUT_FILENAME_PATTERN='molecule_{output_type}{packet_num}.{extension}',
+                      # Default number of molecules to store per molecule packet, if the
+                      # output type is set to packet.
+                      MOLECULE_MAKER_DEFAULT_NUM_MOLECULES_PER_PACKET=10_000,
+                      # Name of file where MoleculeMakerStep logging is stored
+                      MOLECULE_MAKER_LOG_FILENAME="MoleculeMakerStep.log",
                       TRANSCRIPTOMES_LOG_FILENAME="TranscriptQuantificatAndMoleculeGenerationStep.log"
                      )
 
