@@ -142,10 +142,16 @@ input:
 ### Output directory and parameters
 output:
     # Path to upper-level directory in which all CAMPAREE output will be saved.
-    #
     directory_path: test_data/results/
-    # This is likely to be removed or changed drastically.
-    type: molecule_file
+    # The format of the CAMPAREE molecule output. Should be either 'file' or
+    # 'packet'.
+    # file: creates a raw text file of the molecules, their source locations on
+    #       the parental and reference genomes, and the CIGAR strings mapping the
+    #       molecules on the parental and reference genomes.
+    # packet: A binay file of molecule information suitable for use by the BEERS2
+    #         simulator. This file is currently pickled, but this is likely to
+    #         change.
+    type: file
     # Simulate the default number of RNA transcript molecules for all samples
     # and ignore the sample-specific molecule counts.
     override_sample_molecule_count: False

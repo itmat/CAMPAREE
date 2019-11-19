@@ -59,7 +59,7 @@ class BeagleStep(AbstractCampareeStep):
             #     module and functionality (it manages dual writing to both
             #     console and logging files).
             print(f"Calling beagle with command: {command}")
-            print("Beagle output follows:\n")
+            print(f"For full Beagle output see {log_file_path}")
             log_file.write(f"Calling beagle with command: {command}.\n\n")
             log_file.write("Beagle output follows:\n")
 
@@ -78,8 +78,7 @@ class BeagleStep(AbstractCampareeStep):
                 raise CampareeException(f"\nBeagle process failed. "
                                         f"For full details see {log_file_path}\n")
 
-            print(beagle_result.stdout)
-            print(f"\nFinished running Beagle.\n")
+            print(f"Finished running Beagle.\n")
             log_file.write(f"{beagle_result.stdout}\n")
             log_file.write(f"\nFinished running Beagle.\n")
             log_file.write("ALL DONE!\n")

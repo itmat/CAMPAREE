@@ -86,14 +86,17 @@ class KallistoIndexStep(AbstractCampareeStep):
                            f"    input transcriptome FASTA: {transcriptome_fasta_path}\n")
 
             log_file.write(f"Create kallisto index directory.\n")
-            os.mkdir(kallisto_index_dir_path)
+            if os.path.isdir(kallisto_index_dir_path):
+                log_file.write(f"kallisto index directory already exists.\n")
+            else:
+                os.mkdir(kallisto_index_dir_path)
 
             kallisto_command = KallistoIndexStep.BASE_KALLISTO_INDEX_COMMAND.format(kallisto_bin_path=kallisto_bin_path,
                                                                                     kallisto_index_file=kallisto_index_file_path,
                                                                                     transcriptome_fasta=transcriptome_fasta_path)
 
             print(f"Running kallisto with command: {kallisto_command}")
-            print("kallisto index output follows:\n")
+            print(f"For full kallisto index output see {log_file_path}")
             log_file.write(f"Running kallisto with command: {kallisto_command}.\n\n")
             log_file.write("kallisto index output follows:\n")
 
@@ -112,10 +115,9 @@ class KallistoIndexStep(AbstractCampareeStep):
                 raise CampareeException(f"\nkallisto index process failed. "
                                         f"For full details see {log_file_path}\n")
 
-            print(kallisto_result.stdout)
-            print(f"\nFinished generating kallisto index.\n")
+            print(f"Finished generating kallisto index.\n")
             log_file.write(f"{kallisto_result.stdout}\n")
-            log_file.write(f"\nFinished generating kallisto index.\n")
+            log_file.write(f"Finished generating kallisto index.\n")
             log_file.write("ALL DONE!\n")
 
     def get_commandline_call(self, sample_id, genome_suffix, kallisto_bin_path, transcriptome_fasta_path):
@@ -345,7 +347,7 @@ class KallistoQuantStep(AbstractCampareeStep):
                                                                                     read_files=read_files)
 
             print(f"Running kallisto with command: {kallisto_command}")
-            print("kallisto quantification output follows:\n")
+            print(f"For full kallisto quantification output see {log_file_path}")
             log_file.write(f"Running kallisto with command: {kallisto_command}.\n\n")
             log_file.write("kallisto quantification output follows:\n")
 
@@ -364,10 +366,9 @@ class KallistoQuantStep(AbstractCampareeStep):
                 raise CampareeException(f"\nkallisto quant process failed. "
                                         f"For full details see {log_file_path}\n")
 
-            print(kallisto_result.stdout)
-            print(f"\nFinished kallisto quantification.\n")
+            print(f"Finished kallisto quantification.\n")
             log_file.write(f"{kallisto_result.stdout}\n")
-            log_file.write(f"\nFinished kallisto quantification.\n")
+            log_file.write(f"Finished kallisto quantification.\n")
             log_file.write("ALL DONE!\n")
 
     def get_commandline_call(self, sample, genome_suffix, kallisto_bin_path):

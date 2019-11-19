@@ -12,9 +12,6 @@ import subprocess
 import inspect
 import numpy
 
-import camparee.transcriptomes as transcriptomes
-
-
 class ExpressionPipeline:
     """
     This class represents a pipeline of steps that take user supplied fastq files through alignment, variants
@@ -422,8 +419,8 @@ class ExpressionPipeline:
                                              CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name=suffix))
             self.run_step(step_name='TranscriptGeneQuantificationStep',
                           sample=sample,
-                          execute_args=[sample, kallisto_quant_path, update_annot_path],
-                          cmd_line_args=[sample, kallisto_quant_path, update_annot_path],
+                          execute_args=[sample.sample_id, kallisto_quant_path, update_annot_path],
+                          cmd_line_args=[sample.sample_id, kallisto_quant_path, update_annot_path],
                           dependency_list=[f"KallistoQuantStep.{sample.sample_id}.{suffix}"])
 
             genome_alignment_path = bam_files[sample.sample_id]

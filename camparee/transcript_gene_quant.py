@@ -17,7 +17,7 @@ class TranscriptGeneQuantificationStep(AbstractCampareeStep):
     OUTPUT_GENE_FILE_NAME = CAMPAREE_CONSTANTS.TXQUANT_OUTPUT_GENE_FILENAME
     OUTPUT_PSI_VALUE_FILE_NAME = CAMPAREE_CONSTANTS.TXQUANT_OUTPUT_PSI_FILENAME
 
-    def __init__(self, log_directory_path, data_directory_path):
+    def __init__(self, log_directory_path, data_directory_path, parameter=None):
         """Constructor for TranscriptGeneQuantificationStep object.
 
         Parameters

@@ -88,7 +88,7 @@ class Bowtie2IndexStep(AbstractCampareeStep):
 
         """
         bowtie2_index_dir_path = os.path.join(self.data_directory_path, f'sample{sample_id}',
-                                               Bowtie2IndexStep.BOWTIE2_INDEX_DIR_PATTERN.format(genome_name=genome_suffix))
+                                              Bowtie2IndexStep.BOWTIE2_INDEX_DIR_PATTERN.format(genome_name=genome_suffix))
         bowtie2_index_file_prefix = os.path.join(self.data_directory_path, f'sample{sample_id}',
                                                  Bowtie2IndexStep.BOWTIE2_INDEX_DIR_PATTERN.format(genome_name=genome_suffix),
                                                  Bowtie2IndexStep.BOWTIE2_INDEX_PREFIX_PATTERN.format(genome_name=genome_suffix))
@@ -98,7 +98,7 @@ class Bowtie2IndexStep(AbstractCampareeStep):
         with open(log_file_path, 'w') as log_file:
 
             print(f"Building Bowtie2 indexes for transcriptome {genome_suffix} "
-                           f"of sample{sample_id}.")
+                  f"of sample{sample_id}.")
             log_file.write(f"Building Bowtie2 indexes for transcriptome {genome_suffix} "
                            f"of sample{sample_id}.\n")
 
@@ -110,7 +110,10 @@ class Bowtie2IndexStep(AbstractCampareeStep):
                            f"    Number of Bowtie2 threads: {self.num_bowtie2_threads}\n")
 
             log_file.write(f"Create Bowtie2 index directory.\n")
-            os.mkdir(bowtie2_index_dir_path)
+            if os.path.isdir(bowtie2_index_dir_path):
+                log_file.write(f"Bowtie2 index directory already exists.\n")
+            else:
+                os.mkdir(bowtie2_index_dir_path)
 
             bwt2_cmd_options = ' '.join( f"{key} {value}" for key,value in self.bowtie2_cmd_options.items() )
 
@@ -121,7 +124,7 @@ class Bowtie2IndexStep(AbstractCampareeStep):
                                                                                  reference_fasta=transcriptome_fasta_path)
 
             print(f"Running Bowtie2 with command: {bowtie2_command}")
-            print("Bowtie2 index output follows:\n")
+            print(f"For full Bowtie2 index output see {log_file_path}")
             log_file.write(f"Running Bowtie2 with command: {bowtie2_command}.\n\n")
             log_file.write("Bowtie2 index output follows:\n")
 
@@ -140,8 +143,7 @@ class Bowtie2IndexStep(AbstractCampareeStep):
                 raise CampareeException(f"\nBowtie2 index process failed. "
                                         f"For full details see {log_file_path}\n")
 
-            print(bowtie2_result.stdout)
-            print(f"\nFinished generating Bowtie2 index.\n")
+            print(f"Finished generating Bowtie2 index.\n")
             log_file.write(f"{bowtie2_result.stdout}\n")
             log_file.write(f"\nFinished generating Bowtie2 index.\n")
             log_file.write("ALL DONE!\n")
@@ -423,7 +425,7 @@ class Bowtie2AlignStep(AbstractCampareeStep):
                                                                                  output_sam_file=bowtie2_output_file_path)
 
             print(f"Running Bowtie2 with command: {bowtie2_command}")
-            print("Bowtie2 alignment output follows:\n")
+            print(f"For full Bowtie2 alignment output see {log_file_path}")
             log_file.write(f"Running Bowtie2 with command: {bowtie2_command}.\n\n")
             log_file.write("Bowtie2 alignment output follows:\n")
 
@@ -442,8 +444,7 @@ class Bowtie2AlignStep(AbstractCampareeStep):
                 raise CampareeException(f"\nBowtie2 alignment process failed. "
                                         f"For full details see {log_file_path}\n")
 
-            print(bowtie2_result.stdout)
-            print(f"\nFinished Bowtie2 alignment.\n")
+            print(f"Finished Bowtie2 alignment.\n")
             log_file.write(f"{bowtie2_result.stdout}\n")
             log_file.write(f"\nFinished Bowtie2 alignment.\n")
             log_file.write("ALL DONE!\n")
