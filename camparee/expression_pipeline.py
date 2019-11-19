@@ -58,6 +58,22 @@ class ExpressionPipeline:
             self.__step_scheduler_param_overrides[step_name] = scheduler_parameters
             JobMonitor.PIPELINE_STEPS[step_name] = step_class
 
+        # The MoleculeMaker step is configured a little differently from the other
+        # steps. Most of the steps are instantiated and configured based on entries
+        # in the "steps:" section of the config file. MoleculeMaker does not have
+        # an entry in the steps section because it is configured from the "output:"
+        # section of the config file.
+        module_name = "molecule_maker"
+        step_name = "MoleculeMakerStep"
+        parameters = None
+        scheduler_parameters = None
+        module = importlib.import_module(f'.{module_name}', package="camparee")
+        step_class = getattr(module, step_name)
+        self.steps[step_name] = step_class(log_directory_path, data_directory_path, parameters)
+        self.__step_paths[step_name] = inspect.getfile(module)
+        self.__step_scheduler_param_overrides[step_name] = scheduler_parameters
+        JobMonitor.PIPELINE_STEPS[step_name] = step_class
+
         # Validate the resources and set file and directory paths as needed.
         if not self.validate_and_set_resources(configuration['resources']):
             raise CampareeValidationException("The resources data is not completely valid.  "
@@ -342,7 +358,6 @@ class ExpressionPipeline:
                           dependency_list=[f"BeagleStep"])
 
             for suffix in [1, 2]:
-
                 self.run_step(step_name='UpdateAnnotationForGenomeStep',
                               sample=sample,
                               execute_args=[sample, suffix, self.annotation_file_path,
@@ -352,19 +367,94 @@ class ExpressionPipeline:
                               dependency_list=[f"GenomeBuilderStep.{sample.sample_id}"],
                               jobname_suffix=suffix)
 
-            seed = seeds[f"TranscriptQuantificatAndMoleculeGenerationStep.{sample.sample_id}"]
+                update_annot_path = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
+                                                 CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name=suffix))
+                self.run_step(step_name='TranscriptomeFastaPreparationStep',
+                              sample=sample,
+                              execute_args=[sample.sample_id, suffix, self.reference_genome_file_path,
+                                            update_annot_path],
+                              cmd_line_args=[sample.sample_id, suffix, self.reference_genome_file_path,
+                                             update_annot_path],
+                              dependency_list=[f"UpdateAnnotationForGenomeStep.{sample.sample_id}.{suffix}"],
+                              jobname_suffix=suffix)
+
+                tx_fasta_path = os.path.join(self.data_directory_path, f'sample{sample.sample_id}',
+                                             CAMPAREE_CONSTANTS.TRANSCRIPTOME_FASTA_OUTPUT_FILENAME_PATTERN.format(genome_name=suffix))
+                self.run_step(step_name='KallistoIndexStep',
+                              sample=sample,
+                              execute_args=[sample.sample_id, suffix, self.kallisto_file_path,
+                                            tx_fasta_path],
+                              cmd_line_args=[sample.sample_id, suffix, self.kallisto_file_path,
+                                             tx_fasta_path],
+                              dependency_list=[f"TranscriptomeFastaPreparationStep.{sample.sample_id}.{suffix}"],
+                              jobname_suffix=suffix)
+
+                self.run_step(step_name='KallistoQuantStep',
+                              sample=sample,
+                              execute_args=[sample, suffix, self.kallisto_file_path],
+                              cmd_line_args=[sample, suffix, self.kallisto_file_path],
+                              dependency_list=[f"KallistoIndexStep.{sample.sample_id}.{suffix}"],
+                              jobname_suffix=suffix)
+
+                self.run_step(step_name='Bowtie2IndexStep',
+                              sample=sample,
+                              execute_args=[sample.sample_id, suffix, self.bowtie2_dir_path,
+                                            tx_fasta_path],
+                              cmd_line_args=[sample.sample_id, suffix, self.bowtie2_dir_path,
+                                             tx_fasta_path],
+                              dependency_list=[f"TranscriptomeFastaPreparationStep.{sample.sample_id}.{suffix}"],
+                              jobname_suffix=suffix)
+
+                self.run_step(step_name='Bowtie2AlignStep',
+                              sample=sample,
+                              execute_args=[sample, suffix, self.bowtie2_dir_path],
+                              cmd_line_args=[sample, suffix, self.bowtie2_dir_path],
+                              dependency_list=[f"Bowtie2IndexStep.{sample.sample_id}.{suffix}"],
+                              jobname_suffix=suffix)
+
+            # Use kallisto quantifications from the first parental genome to estimate
+            # gene, transcript, and PSI quantifications for the simulated data.
+            suffix=1
+            kallisto_quant_path = os.path.join(self.data_directory_path, f'sample{sample.sample_id}',
+                                               CAMPAREE_CONSTANTS.KALLISTO_QUANT_DIR_PATTERN.format(genome_name=suffix),
+                                               CAMPAREE_CONSTANTS.KALLISTO_ABUNDANCE_FILENAME)
+            update_annot_path = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
+                                             CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name=suffix))
+            self.run_step(step_name='TranscriptGeneQuantificationStep',
+                          sample=sample,
+                          execute_args=[sample, kallisto_quant_path, update_annot_path],
+                          cmd_line_args=[sample, kallisto_quant_path, update_annot_path],
+                          dependency_list=[f"KallistoQuantStep.{sample.sample_id}.{suffix}"])
+
+            genome_alignment_path = bam_files[sample.sample_id]
+            update_annot_path_1 = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
+                                               CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name='1'))
+            update_annot_path_2 = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
+                                               CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name='2'))
+            tx_align_path_1 = os.path.join(self.data_directory_path, f'sample{sample.sample_id}',
+                                           CAMPAREE_CONSTANTS.BOWTIE2_ALIGN_FILENAME_PATTERN.format(genome_name='1'))
+            tx_align_path_2 = os.path.join(self.data_directory_path, f'sample{sample.sample_id}',
+                                           CAMPAREE_CONSTANTS.BOWTIE2_ALIGN_FILENAME_PATTERN.format(genome_name='2'))
+            self.run_step(step_name='AllelicImbalanceQuantificationStep',
+                          sample=sample,
+                          execute_args=[sample.sample_id, genome_alignment_path, update_annot_path_1,
+                                        update_annot_path_2, tx_align_path_1, tx_align_path_2],
+                          cmd_line_args=[sample.sample_id, genome_alignment_path, update_annot_path_1,
+                                         update_annot_path_2, tx_align_path_1, tx_align_path_2],
+                          dependency_list=[f"Bowtie2AlignStep.{sample.sample_id}.1",
+                                           f"Bowtie2AlignStep.{sample.sample_id}.2"])
+
+            seed = seeds[f"MoleculeMakerStep.{sample.sample_id}"]
             num_molecules_to_generate = sample.molecule_count
             # If no molecule count specified for this sample, use the default count.
             if not num_molecules_to_generate or self.override_sample_molecule_count:
                 num_molecules_to_generate = self.default_molecule_count
-            self.run_step(step_name='TranscriptQuantificatAndMoleculeGenerationStep',
+            self.run_step(step_name='MoleculeMakerStep',
                           sample=sample,
-                          execute_args=[sample, self.kallisto_file_path, self.bowtie2_dir_path,
-                                        self.output_type, num_molecules_to_generate, seed],
-                          cmd_line_args=[sample, self.kallisto_file_path, self.bowtie2_dir_path,
-                                         self.output_type, num_molecules_to_generate, seed],
-                          dependency_list=[f"UpdateAnnotationForGenomeStep.{sample.sample_id}.1",
-                                           f"UpdateAnnotationForGenomeStep.{sample.sample_id}.2"])
+                          execute_args=[sample, self.output_type, num_molecules_to_generate, seed],
+                          cmd_line_args=[sample, self.output_type, num_molecules_to_generate, seed],
+                          dependency_list=[f"TranscriptGeneQuantificationStep.{sample.sample_id}",
+                                           f"AllelicImbalanceQuantificationStep.{sample.sample_id}"])
 
         self.expression_pipeline_monitor.monitor_until_all_jobs_completed(queue_update_interval=10)
 
@@ -393,7 +483,7 @@ class ExpressionPipeline:
         for job in ["VariantsCompilationStep", "BeagleStep"]:
             seeds[job] = numpy.random.randint(MAX_SEED)
         # Seeds for jobs that are run per sample
-        for job in ["VariantsFinderStep", "TranscriptQuantificatAndMoleculeGenerationStep"]:
+        for job in ["VariantsFinderStep", "MoleculeMakerStep"]:
             for sample in self.samples:
                 seeds[f"{job}.{sample.sample_id}"] = numpy.random.randint(MAX_SEED)
         return seeds
