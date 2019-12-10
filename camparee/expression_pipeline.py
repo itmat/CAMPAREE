@@ -1,16 +1,13 @@
 import sys
 import os
 import importlib
-import time
+import inspect
+import numpy
+
 from beers_utils.constants import CONSTANTS,SUPPORTED_SCHEDULER_MODES,MAX_SEED
 from camparee.camparee_constants import CAMPAREE_CONSTANTS
 from beers_utils.job_monitor import JobMonitor
 from camparee.camparee_utils import CampareeUtils, CampareeException
-#To enable export of config parameter dictionaries to command line
-import json
-import subprocess
-import inspect
-import numpy
 
 class ExpressionPipeline:
     """
@@ -44,32 +41,6 @@ class ExpressionPipeline:
         # Individual steps can provide scheduler parameters that override
         # the default values.
         self.__step_scheduler_param_overrides = {}
-        for step, props in configuration['steps'].items():
-            module_name, step_name = step.rsplit(".")
-            parameters = props["parameters"] if props and "parameters" in props else None
-            scheduler_parameters = props["scheduler_parameters"] if props and "scheduler_parameters" in props else None
-            module = importlib.import_module(f'.{module_name}', package="camparee")
-            step_class = getattr(module, step_name)
-            self.steps[step_name] = step_class(log_directory_path, data_directory_path, parameters)
-            self.__step_paths[step_name] = inspect.getfile(module)
-            self.__step_scheduler_param_overrides[step_name] = scheduler_parameters
-            JobMonitor.PIPELINE_STEPS[step_name] = step_class
-
-        # The MoleculeMaker step is configured a little differently from the other
-        # steps. Most of the steps are instantiated and configured based on entries
-        # in the "steps:" section of the config file. MoleculeMaker does not have
-        # an entry in the steps section because it is configured from the "output:"
-        # section of the config file.
-        module_name = "molecule_maker"
-        step_name = "MoleculeMakerStep"
-        parameters = None
-        scheduler_parameters = None
-        module = importlib.import_module(f'.{module_name}', package="camparee")
-        step_class = getattr(module, step_name)
-        self.steps[step_name] = step_class(log_directory_path, data_directory_path, parameters)
-        self.__step_paths[step_name] = inspect.getfile(module)
-        self.__step_scheduler_param_overrides[step_name] = scheduler_parameters
-        JobMonitor.PIPELINE_STEPS[step_name] = step_class
 
         # Validate the resources and set file and directory paths as needed.
         if not self.validate_and_set_resources(configuration['resources']):
@@ -106,6 +77,36 @@ class ExpressionPipeline:
                                                       scheduler_name=self.scheduler_mode,
                                                       default_num_processors=self.scheduler_default_params['default_num_processors'],
                                                       default_memory_in_mb=self.scheduler_default_params['default_memory_in_mb'])
+
+        # Load instances of each pipeline step into the dictionyar of pipleine
+        # steps tracked by the job monitor.
+        for step, props in configuration['steps'].items():
+            module_name, step_name = step.rsplit(".")
+            parameters = props["parameters"] if props and "parameters" in props else None
+            scheduler_parameters = props["scheduler_parameters"] if props and "scheduler_parameters" in props else None
+            module = importlib.import_module(f'.{module_name}', package="camparee")
+            step_class = getattr(module, step_name)
+            self.steps[step_name] = step_class(log_directory_path, data_directory_path, parameters)
+            self.__step_paths[step_name] = inspect.getfile(module)
+            self.__step_scheduler_param_overrides[step_name] = scheduler_parameters
+            self.expression_pipeline_monitor.add_pipeline_step(step_name=step_name,
+                                                               step_class=step_class)
+
+        # The MoleculeMaker step is configured a little differently from the other
+        # steps. Most of the steps are instantiated and configured based on entries
+        # in the "steps:" section of the config file. MoleculeMaker does not have
+        # an entry in the steps section because it is configured from the "output:"
+        # section of the config file.
+        module_name = "molecule_maker"
+        step_name = "MoleculeMakerStep"
+        parameters = None
+        scheduler_parameters = None
+        module = importlib.import_module(f'.{module_name}', package="camparee")
+        step_class = getattr(module, step_name)
+        self.steps[step_name] = step_class(log_directory_path, data_directory_path, parameters)
+        self.__step_paths[step_name] = inspect.getfile(module)
+        self.__step_scheduler_param_overrides[step_name] = scheduler_parameters
+        self.expression_pipeline_monitor.add_pipeline_step(step_name, step_class)
 
     def create_intermediate_data_subdirectories(self, data_directory_path, log_directory_path):
         for sample in self.samples:

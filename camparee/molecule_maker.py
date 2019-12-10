@@ -742,9 +742,9 @@ class MoleculeMakerStep(AbstractCampareeStep):
                             help='String representation of a Sample object.')
         parser.add_argument('--output_type', required=True,
                             help=f"Type of molecule output ({', '.join(MoleculeMakerStep.OUTPUT_OPTIONS_W_EXTENSIONS.keys())}).")
-        parser.add_argument('--output_molecule_count', required=True,
+        parser.add_argument('--output_molecule_count', type=int, required=True,
                             help='Number of molecules to generate.')
-        parser.add_argument('--seed', type=int, default=None, require=False,
+        parser.add_argument('--seed', type=int, default=None, required=False,
                             help='Seed value for random number generator.')
         parser.add_argument('--molecules_per_packet', type=int, default=None, required=False,
                             help='Number of molecules per molecule packet. '
