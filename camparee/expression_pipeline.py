@@ -367,11 +367,13 @@ class ExpressionPipeline:
 
                 update_annot_path = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
                                                  CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name=suffix))
+                parental_genome_path = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
+                                                    CAMPAREE_CONSTANTS.GENOMEBUILDER_SEQUENCE_FILENAME_PATTERN.format(genome_name=suffix))
                 self.run_step(step_name='TranscriptomeFastaPreparationStep',
                               sample=sample,
-                              execute_args=[sample.sample_id, suffix, self.reference_genome_file_path,
+                              execute_args=[sample.sample_id, suffix, parental_genome_path,
                                             update_annot_path],
-                              cmd_line_args=[sample.sample_id, suffix, self.reference_genome_file_path,
+                              cmd_line_args=[sample.sample_id, suffix, parental_genome_path,
                                              update_annot_path],
                               dependency_list=[f"UpdateAnnotationForGenomeStep.{sample.sample_id}.{suffix}"],
                               jobname_suffix=suffix)

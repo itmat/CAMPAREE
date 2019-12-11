@@ -30,7 +30,6 @@ class MoleculeMakerStep(AbstractCampareeStep):
     _ALLELIC_IMBALANCE_FILENAME=CAMPAREE_CONSTANTS.ALLELIC_IMBALANCE_OUTPUT_FILENAME
     _PARENTAL_TX_FASTA_FILENAME_PATTERN=CAMPAREE_CONSTANTS.TRANSCRIPTOME_FASTA_OUTPUT_FILENAME_PATTERN
     _PARENTAL_ANNOT_FILENAME_PATTERN=CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN
-    _PARENTAL_GENOME_PREFIX=CAMPAREE_CONSTANTS.GENOMEBUILDER_OUTPUT_PREFIX
     _PARENTAL_GENOME_FASTA_FILENAME_PATTERN=CAMPAREE_CONSTANTS.GENOMEBUILDER_SEQUENCE_FILENAME_PATTERN
     _PARENTAL_GENOME_INDEL_FILENAME_PATTERN=CAMPAREE_CONSTANTS.GENOMEBUILDER_INDEL_FILENAME_PATTERN
 
@@ -508,8 +507,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
                     for genome_name in [1,2]]
             self.genomes = \
                 [self.load_genome(os.path.join(sample_data_directory,
-                                               self._PARENTAL_GENOME_FASTA_FILENAME_PATTERN.format(genome_output_file_stem=self._PARENTAL_GENOME_PREFIX,
-                                                                                                   genome_name=genome_name)))
+                                               self._PARENTAL_GENOME_FASTA_FILENAME_PATTERN.format(genome_name=genome_name)))
                     for genome_name in [1,2]]
 
             print('Loading indel information from both parental genomes.')
@@ -520,8 +518,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
             # locations in the original reference genome.
             indel_data = \
                 [self.load_indels(os.path.join(sample_data_directory,
-                                               self._PARENTAL_GENOME_INDEL_FILENAME_PATTERN.format(genome_output_file_stem=self._PARENTAL_GENOME_PREFIX,
-                                                                                                   genome_name=genome_name)))
+                                               self._PARENTAL_GENOME_INDEL_FILENAME_PATTERN.format(genome_name=genome_name)))
                     for genome_name in [1,2]]
             self.indels = [indels for indels, offset_data in indel_data]
             self.offset_data = [offset_data for indels, offset_data in indel_data]
