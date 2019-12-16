@@ -59,19 +59,16 @@ class ExpressionPipeline:
             raise CampareeValidationException("The output data is not completely valid.  "
                                               "Consult the standard error file for details.")
 
-        # Load default schduler parameters (if provided)
-        if self.scheduler_mode != "serial":
-            print(f"Running CAMPAREE using the {self.scheduler_mode} job scheduler.",
+        # Load default scheduler parameters (if provided)
+        print(f"Running CAMPAREE using the {self.scheduler_mode} job scheduler.",
+              file=sys.stderr)
+        if configuration['setup'].get('default_scheduler_parameters'):
+            self.scheduler_default_params['default_num_processors'] = configuration['setup']['default_scheduler_parameters'].get('default_num_processors', None)
+            self.scheduler_default_params['default_memory_in_mb'] = configuration['setup']['default_scheduler_parameters'].get('default_memory_in_mb', None)
+            self.scheduler_default_params['default_submission_args'] = configuration['setup']['default_scheduler_parameters'].get('default_submission_args', None)
+            print("With the following default scheduler parameters:\n",
+                  '\n'.join({f"\t-{key} : {value}" for key, value in self.scheduler_default_params.items()}),
                   file=sys.stderr)
-            if configuration['setup'].get('default_scheduler_parameters'):
-                self.scheduler_default_params['default_num_processors'] = configuration['setup']['default_scheduler_parameters'].get('default_num_processors', None)
-                self.scheduler_default_params['default_memory_in_mb'] = configuration['setup']['default_scheduler_parameters'].get('default_memory_in_mb', None)
-                self.scheduler_default_params['default_submission_args'] = configuration['setup']['default_scheduler_parameters'].get('default_submission_args', None)
-                print("With the following default scheduler parameters:\n",
-                      '\n'.join({f"\t-{key} : {value}" for key, value in self.scheduler_default_params.items()}),
-                      file=sys.stderr)
-        else:
-            print("Running CAMPAREE in serial mode.", file=sys.stderr)
 
         self.expression_pipeline_monitor = JobMonitor(output_directory_path=self.output_directory_path,
                                                       scheduler_name=self.scheduler_mode,
@@ -491,9 +488,8 @@ class ExpressionPipeline:
     def run_step(self, step_name, sample, execute_args, cmd_line_args, dependency_list=None,
                  jobname_suffix=None):
         """
-        Helper function that runs the given step, with the given parameters. If
-        CAMPAREE is configured to use a scheduler/job monitor, this helper function
-        wraps submission of the step to the job monitor.
+        Helper function that runs the given step, with the given parameters. It
+        wraps submission of the step to the scheduler/job monitor.
 
         Parameters
         ----------
@@ -519,58 +515,48 @@ class ExpressionPipeline:
             raise CampareeException(f"{step_name} not in the list of loaded steps (see config file).")
 
         step_class = self.steps[step_name]
-        if self.scheduler_mode == "serial":
-            status_msg = f"Performing {step_name}"
-            status_msg += f".{jobname_suffix}" if jobname_suffix else ""
-            status_msg += f" on sample{sample.sample_id}" if sample else ""
-            print(status_msg)
-            step_class.execute(*execute_args)
-            status_msg = f"Finished {step_name}"
-            status_msg += f".{jobname_suffix}" if jobname_suffix else ""
-            status_msg += f" on sample{sample.sample_id}" if sample else ""
-            print(status_msg + "\n")
-        else:
-            # Check if the current step has an overrides for scheduler parameters
-            scheduler_num_processors = None
-            scheduler_memory_in_mb = None
-            if self.__step_scheduler_param_overrides[step_name]:
-                scheduler_num_processors = self.__step_scheduler_param_overrides[step_name].get('num_processors',None)
-                scheduler_memory_in_mb = self.__step_scheduler_param_overrides[step_name].get('memory_in_mb',None)
 
-            # Check if there are any scheduler submission arguments to add
-            scheduler_submission_args = ""
-            if self.scheduler_default_params['default_submission_args']:
-                scheduler_submission_args = self.scheduler_default_params['default_submission_args']
+        # Check if the current step has an overrides for scheduler parameters
+        scheduler_num_processors = None
+        scheduler_memory_in_mb = None
+        if self.__step_scheduler_param_overrides[step_name]:
+            scheduler_num_processors = self.__step_scheduler_param_overrides[step_name].get('num_processors',None)
+            scheduler_memory_in_mb = self.__step_scheduler_param_overrides[step_name].get('memory_in_mb',None)
 
-            stdout_log = os.path.join(step_class.log_directory_path,
-                                      f"sample{sample.sample_id}" if sample else "",
-                                      f"{step_name}{f'.{jobname_suffix}' if jobname_suffix else ''}.{self.scheduler_mode}.out")
-            stderr_log = os.path.join(step_class.log_directory_path,
-                                      f"sample{sample.sample_id}" if sample else "",
-                                      f"{step_name}{f'.{jobname_suffix}' if jobname_suffix else ''}.{self.scheduler_mode}.err")
-            scheduler_job_name = (f"{step_name}{f'.sample{sample.sample_id}_{sample.sample_name}' if sample else ''}"
-                                  f"{f'.{jobname_suffix}' if jobname_suffix else ''}")
-            scheduler_args = {'job_name' : scheduler_job_name,
-                              'stdout_logfile' : stdout_log,
-                              'stderr_logfile' : stderr_log,
-                              'num_processors' : scheduler_num_processors,
-                              'memory_in_mb' : scheduler_memory_in_mb,
-                              'additional_args' : scheduler_submission_args
-                             }
-            command = step_class.get_commandline_call(*cmd_line_args)
-            validation_attributes = step_class.get_validation_attributes(*cmd_line_args)
-            output_directory = os.path.join(step_class.data_directory_path,
-                                            f"sample{sample.sample_id}" if sample else "")
-            self.expression_pipeline_monitor.submit_new_job(job_id=f"{step_name}{f'.{sample.sample_id}' if sample else ''}"
-                                                                   f"{f'.{jobname_suffix}' if jobname_suffix else ''}",
-                                                            job_command=command,
-                                                            sample=sample,
-                                                            step_name=step_name,
-                                                            scheduler_arguments=scheduler_args,
-                                                            validation_attributes=validation_attributes,
-                                                            output_directory_path=output_directory,
-                                                            system_id=None,
-                                                            dependency_list=dependency_list)
+        # Check if there are any scheduler submission arguments to add
+        scheduler_submission_args = ""
+        if self.scheduler_default_params['default_submission_args']:
+            scheduler_submission_args = self.scheduler_default_params['default_submission_args']
+
+        stdout_log = os.path.join(step_class.log_directory_path,
+                                  f"sample{sample.sample_id}" if sample else "",
+                                  f"{step_name}{f'.{jobname_suffix}' if jobname_suffix else ''}.{self.scheduler_mode}.out")
+        stderr_log = os.path.join(step_class.log_directory_path,
+                                  f"sample{sample.sample_id}" if sample else "",
+                                  f"{step_name}{f'.{jobname_suffix}' if jobname_suffix else ''}.{self.scheduler_mode}.err")
+        scheduler_job_name = (f"{step_name}{f'.sample{sample.sample_id}_{sample.sample_name}' if sample else ''}"
+                              f"{f'.{jobname_suffix}' if jobname_suffix else ''}")
+        scheduler_args = {'job_name' : scheduler_job_name,
+                          'stdout_logfile' : stdout_log,
+                          'stderr_logfile' : stderr_log,
+                          'num_processors' : scheduler_num_processors,
+                          'memory_in_mb' : scheduler_memory_in_mb,
+                          'additional_args' : scheduler_submission_args
+                         }
+        command = step_class.get_commandline_call(*cmd_line_args)
+        validation_attributes = step_class.get_validation_attributes(*cmd_line_args)
+        output_directory = os.path.join(step_class.data_directory_path,
+                                        f"sample{sample.sample_id}" if sample else "")
+        self.expression_pipeline_monitor.submit_new_job(job_id=f"{step_name}{f'.{sample.sample_id}' if sample else ''}"
+                                                               f"{f'.{jobname_suffix}' if jobname_suffix else ''}",
+                                                        job_command=command,
+                                                        sample=sample,
+                                                        step_name=step_name,
+                                                        scheduler_arguments=scheduler_args,
+                                                        validation_attributes=validation_attributes,
+                                                        output_directory_path=output_directory,
+                                                        system_id=None,
+                                                        dependency_list=dependency_list)
 
     @staticmethod
     def main(configuration, scheduler_mode, output_directory_path, input_samples):
