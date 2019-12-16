@@ -169,9 +169,7 @@ class GenomeBuilderStep(AbstractCampareeStep):
         self.variants_file_path = os.path.join(self.data_directory_path, self.sample_id,
                                                CAMPAREE_CONSTANTS.VARIANTS_FINDER_OUTPUT_FILENAME)
         sample_index = self.locate_sample()
-        self.genome_output_file_stem = os.path.join(self.data_directory_path,
-                                                    self.sample_id,
-                                                    CAMPAREE_CONSTANTS.GENOMEBUILDER_OUTPUT_PREFIX)
+        self.genome_output_directory = os.path.join(self.data_directory_path, self.sample_id)
         self.log_file_path = os.path.join(self.log_directory_path, self.sample_id,
                                           CAMPAREE_CONSTANTS.GENOMEBUILDER_LOG_FILENAME)
         self.unpaired_chr_list = self.get_unpaired_chr_list()
@@ -298,12 +296,12 @@ class GenomeBuilderStep(AbstractCampareeStep):
         with open(self.log_file_path, 'a') as log_file:
             position = len(reference_sequence)
             genomes = [Genome(self.genome_names[0], chromosome, reference_sequence, position,
-                              self.genome_output_file_stem)]
+                              self.genome_output_directory)]
 
             # Add reference sequence to both genomes only if the chromosome is designated as paired.
             if chromosome in self.paired_chr_list:
                 genomes.append(Genome(self.genome_names[1], chromosome, reference_sequence, position,
-                                      self.genome_output_file_stem))
+                                      self.genome_output_directory))
             for genome in genomes:
                 log_file.write(f"Final Genome (from reference) for chromosome {chromosome}: {genome}\n")
                 genome.save_to_file()
@@ -335,7 +333,7 @@ class GenomeBuilderStep(AbstractCampareeStep):
                     # genomes.  Whether the chromosome was contributed by the mother or the father is of no
                     # importance.
                     genome = Genome(self.genome_names[0], chromosome, start_sequence, variant.position,
-                                    self.genome_output_file_stem)
+                                    self.genome_output_directory)
 
                 # If the nascent genome seq position translated to reference is downstream of the variant
                 # ignore the variant for this genome.
@@ -392,8 +390,8 @@ class GenomeBuilderStep(AbstractCampareeStep):
             print(f'Processing chromosome {chromosome} from paired chromosome list.')
             with open(self.log_file_path, 'a') as log_file:
 
-                genomes = [Genome(self.genome_names[0], chromosome, '', 0, self.genome_output_file_stem),
-                           Genome(self.genome_names[1], chromosome, '', 0, self.genome_output_file_stem)]
+                genomes = [Genome(self.genome_names[0], chromosome, '', 0, self.genome_output_directory),
+                           Genome(self.genome_names[1], chromosome, '', 0, self.genome_output_directory)]
 
                 for datum in data:
 
@@ -508,8 +506,6 @@ class GenomeBuilderStep(AbstractCampareeStep):
 
         valid_output = False
 
-        genome_builder_outfile_path = os.path.join(data_directory, f"sample{sample_id}",
-                                                   CAMPAREE_CONSTANTS.GENOMEBUILDER_OUTPUT_PREFIX)
         genome_builder_logfile_path = os.path.join(log_directory, f"sample{sample_id}",
                                                    CAMPAREE_CONSTANTS.GENOMEBUILDER_LOG_FILENAME)
 
@@ -528,20 +524,14 @@ class GenomeBuilderStep(AbstractCampareeStep):
 
                 for name in genome_names:
                     genome_output_filename = \
-                        Genome.GENOME_OUTPUT_FILENAME_PATTERN.format(
-                            genome_output_file_stem=genome_builder_outfile_path,
-                            genome_name=name
-                        )
+                        os.path.join(data_directory, f"sample{sample_id}",
+                                     Genome.GENOME_OUTPUT_FILENAME_PATTERN.format(genome_name=name))
                     indel_output_filename = \
-                        Genome.INDEL_OUTPUT_FILENAME_PATTERN.format(
-                            genome_output_file_stem=genome_builder_outfile_path,
-                            genome_name=name
-                        )
+                        os.path.join(data_directory, f"sample{sample_id}",
+                                     Genome.INDEL_OUTPUT_FILENAME_PATTERN.format(genome_name=name))
                     genome_mapper_filename = \
-                        Genome.GENOME_MAPPER_FILENAME_PATTERN.format(
-                            genome_output_file_stem=genome_builder_outfile_path,
-                            genome_name=name
-                        )
+                        os.path.join(data_directory, f"sample{sample_id}",
+                                     Genome.GENOME_MAPPER_FILENAME_PATTERN.format(genome_name=name))
                     custom_genome_output_list.append(os.path.isfile(genome_output_filename))
                     custom_genome_output_list.append(os.path.isfile(indel_output_filename))
                     custom_genome_output_list.append(os.path.isfile(genome_mapper_filename))
@@ -633,7 +623,7 @@ class Genome:
     #in the reference.
     GENOME_MAPPER_FILENAME_PATTERN = CAMPAREE_CONSTANTS.GENOMEBUILDER_MAPPER_FILENAME_PATTERN
 
-    def __init__(self, name, chromosome, start_sequence, start_position, genome_output_file_stem):
+    def __init__(self, name, chromosome, start_sequence, start_position, genome_output_directory):
         self.name = name
         self.chromosome = chromosome
         self.sequence = StringIO()
@@ -641,21 +631,15 @@ class Genome:
         self.position = start_position
         self.offset = 0
         self.genome_output_filename = \
-            self.GENOME_OUTPUT_FILENAME_PATTERN.format(
-                genome_output_file_stem=genome_output_file_stem,
-                genome_name=self.name
-            )
+            os.path.join(genome_output_directory,
+                         self.GENOME_OUTPUT_FILENAME_PATTERN.format(genome_name=self.name))
         self.genome_indels_filename = \
-            self.INDEL_OUTPUT_FILENAME_PATTERN.format(
-                genome_output_file_stem=genome_output_file_stem,
-                genome_name=self.name
-            )
+            os.path.join(genome_output_directory,
+                         self.INDEL_OUTPUT_FILENAME_PATTERN.format(genome_name=self.name))
         self.indels_file = open(self.genome_indels_filename, 'a')
         self.genome_mapper_filename = \
-            self.GENOME_MAPPER_FILENAME_PATTERN.format(
-                genome_output_file_stem=genome_output_file_stem,
-                genome_name=self.name
-            )
+            os.path.join(genome_output_directory,
+                         self.GENOME_MAPPER_FILENAME_PATTERN.format(genome_name=self.name))
         self.mapper_file = open(self.genome_mapper_filename, 'a')
 
         # These variables are used to control the mapper.  The last construct indicates what the last construct event
