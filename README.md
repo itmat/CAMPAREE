@@ -42,7 +42,7 @@ Install required libraries:
 
     pip install -r requirements.txt
 
-Install BEERS package in your Python environment:
+Install CAMPAREE package in your Python environment:
 
     pip install -e .
 
