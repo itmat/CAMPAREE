@@ -44,8 +44,7 @@ CampareeConstants = namedtuple('Constants',
                                 'MOLECULE_MAKER_OUTPUT_OPTIONS_W_EXTENSIONS',
                                 'MOLECULE_MAKER_OUTPUT_FILENAME_PATTERN',
                                 'MOLECULE_MAKER_DEFAULT_NUM_MOLECULES_PER_PACKET',
-                                'MOLECULE_MAKER_LOG_FILENAME',
-                                'TRANSCRIPTOMES_LOG_FILENAME'])
+                                'MOLECULE_MAKER_LOG_FILENAME'])
 
 CampareeConstants.__doc__ = """
 Provides a list of constants specific to the CAMPAREE pipeline.
@@ -151,8 +150,7 @@ CAMPAREE_CONSTANTS = \
                       # output type is set to packet.
                       MOLECULE_MAKER_DEFAULT_NUM_MOLECULES_PER_PACKET=10_000,
                       # Name of file where MoleculeMakerStep logging is stored
-                      MOLECULE_MAKER_LOG_FILENAME="MoleculeMakerStep.log",
-                      TRANSCRIPTOMES_LOG_FILENAME="TranscriptQuantificatAndMoleculeGenerationStep.log"
+                      MOLECULE_MAKER_LOG_FILENAME="MoleculeMakerStep.log"
                      )
 
 CAMPAREE_VERSION="0.1.0"
