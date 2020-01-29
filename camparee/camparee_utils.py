@@ -137,7 +137,7 @@ class CampareeUtils:
         return chromosome, position, variants
 
     @staticmethod
-    def convert_gtf_to_annot_file_format(gtf_filename):
+    def convert_gtf_to_annot_file_format(input_gtf_filename, output_annot_filename):
         """Convert a GTF file to a tab-delimited annotation file with one line
         per transcript. Each line in the annotation file will have the following
         columns:
@@ -166,20 +166,13 @@ class CampareeUtils:
 
         Parameters
         ----------
-        gtf_filename : string
+        input_gtf_filename : string
             Path to GTF file to be converted annotation file format.
-
-        Returns
-        -------
-        string
-            Name of the annotation file produced from the GTF file.
+        output_annot_filename : string
+            Path to output file in annotation format.
 
         """
-        #Note, as-is this statement won't expand "~" in the path to point to
-        #home directory.
-        output_annot_filename = os.path.splitext(gtf_filename)[0] + ".annotation.txt"
-
-        with open(gtf_filename, 'r') as gtf_file, \
+        with open(input_gtf_filename, 'r') as gtf_file, \
                 open(output_annot_filename, 'w') as output_annot_file:
 
             #Print annot file header (note the '#' prefix)
@@ -219,7 +212,8 @@ class CampareeUtils:
                     break
 
             if not exon_found:
-                raise CampareeUtilsException('ERROR: {gtf_file} contains no lines with exon feature_type.\n'.format(gtf_file=gtf_filename))
+                raise CampareeUtilsException(f"ERROR: {input_gtf_filename} contains "
+                                             f"no lines with exon feature_type.\n")
 
             #Prime variables with data from first exon
             chrom = line_data[0]
@@ -312,8 +306,6 @@ class CampareeUtils:
                     biotype=biotype
                 )
             )
-
-        return output_annot_filename
 
 
 class CampareeException(Exception):
