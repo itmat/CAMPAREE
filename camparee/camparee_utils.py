@@ -14,35 +14,50 @@ class CampareeUtils:
     annot_output_format = '{chrom}\t{strand}\t{txStart}\t{txEnd}\t{exonCount}\t{exonStarts}\t{exonEnds}\t{transcriptID}\t{geneID}\t{geneSymbol}\t{biotype}\n'
 
     @staticmethod
-    def edit_reference_genome(reference_genome_file_path, edited_reference_genome_file_path):
+    def create_oneline_seq_fasta(input_fasta_file_path, output_oneline_fasta_file_path):
+        """Helper method to convert a FASTA file containing line breaks embedded
+        within its sequences to a FASTA file containing each sequence on a single
+        line.
+
+        Parameters
+        ----------
+        input_fasta_file_path : string
+            Path to input FASTA file with multi-line sequence data.
+        output_oneline_fasta_file_path : string
+            Path to output FASTA file to create, where single line sequences
+            will be stored.
+
         """
-        Helper method to convert a reference genome file containing line breaks embedded within its
-        sequences to a reference genome file containing each seqeuence on a single line.
-        :param reference_genome_file_path: Path to reference geneome file having multi-line sequence data
-        :param edited_reference_genome_file_path: Path to reference genome file to create with single line sequence
-        data.
-        """
-        reference_genome = dict()
-        fasta_chromosome_pattern = re.compile(">([^\s]*).*")
-        chromosome, sequence = '', None
+        # Build regex recognice FASTA header line and store chromosome/contig
+        # name in the first group. Chromosome/contig name defined as all non-space
+        # characters between ">" and the first whitespace character.
+        fasta_header_pattern = re.compile(r'>([^\s]*).*')
+
+        # Flag to denote when a FASTA sequence (and not a header) is being
+        # processed.
         building_sequence = False
-        with open(reference_genome_file_path, 'r') as reference_genome_file:
-            for line in reference_genome_file:
+
+        # Input FASTA lines saved directly to output file as they are processed
+        # to minimize the amount of data stored in memory at a given time.
+        with open(input_fasta_file_path, 'r') as input_fasta_file, \
+             open(output_oneline_fasta_file_path, 'w') as output_fasta_file:
+
+            for line in input_fasta_file:
                 if line.startswith(">"):
                     if building_sequence:
-                        reference_genome[chromosome] = sequence.getvalue()
-                        sequence.close()
-                    chromosome_match = re.match(fasta_chromosome_pattern, line)
-                    chromosome = chromosome_match.group(1)
+                        # Add newline at the end of previous sequence
+                        output_fasta_file.write('\n')
+                        building_sequence = False
+
+                    fasta_header = re.match(fasta_header_pattern, line).group(1)
+                    output_fasta_file.write('>' + fasta_header + '\n')
+
+                else:
+                    output_fasta_file.write(line.rstrip('\n').upper())
                     building_sequence = True
-                    sequence = StringIO()
-                    continue
-                elif building_sequence:
-                    sequence.write(line.rstrip('\n').upper())
-        with open(edited_reference_genome_file_path, 'w') as edited_reference_genome_file:
-            for chr, seq in reference_genome.items():
-                edited_reference_genome_file.write(f">{chr}\n")
-                edited_reference_genome_file.write(f"{seq}\n")
+
+            # Add line break to end of output oneline fasta file.
+            output_fasta_file.write("\n")
 
     @staticmethod
     def create_genome(genome_file_path):
