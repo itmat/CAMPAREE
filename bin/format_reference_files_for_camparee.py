@@ -4,8 +4,8 @@ This module generates the reference genome sequence and annotation files in the
 format required by CAMPAREE. As input, it requires the reference sequence in
 FASTA format (one entry for each contig/chromosome), the annotation file in GTF
 format, and the name of the species/model corresponding to the input files (e.g.
-Mus_musculus.Ensembl_v97.GRCm38). The output files will be stored in the
-resources/ directory of this CAMPAREE install, under the species/model name
+Mus_musculus.Ensembl_v97.GRCm38). By default, the output files will be stored in
+the resources/ directory of this CAMPAREE install, under the species/model name
 given as part of the input.
 """
 import argparse
@@ -85,15 +85,18 @@ class FormatReferenceFilesForCamparee():
         package. Result saved as a new FASTA file: [species_model].oneline_seqs.fa.
 
         """
-        output_fasta_file_path = os.path.join(self.output_directory,
-                                              self.species_model + ".oneline_seqs.fa")
+        sys.stderr.write("Formatting genome FASTA file.\n")
+        output_filename = self.species_model + ".oneline_seqs.fa"
+        output_fasta_file_path = os.path.join(self.output_directory, output_filename)
         # Check if output file already exists. Prevents accidental overwriting
         # of index files.
         if os.path.isfile(output_fasta_file_path):
-            sys.exit(f"ERROR: Name of output FASTA file formatted for CAMPAREE "
-                     f"already exists:\n    {output_fasta_file_path}\n")
+            sys.exit(f"ERROR: Name of reference genome FASTA file formatted for "
+                     f"CAMPAREE already exists:\n    {output_fasta_file_path}\n")
 
         CampareeUtils.create_oneline_seq_fasta(self.genome_fasta_filename, output_fasta_file_path)
+
+        sys.stderr.write(f"Reformatted genome FASTA file saved as: {output_filename}\n")
 
     def format_gtf_file_for_camparee(self):
         """Reformats transcript annotation file from GTF to the tabular format
@@ -102,18 +105,20 @@ class FormatReferenceFilesForCamparee():
         [species_model].annotation.txt.
 
         """
-
-        output_annot_file_path = os.path.join(self.output_directory,
-                                              self.species_model + ".annotation.txt")
+        sys.stderr.write("Formatting annotation GTF file.\n")
+        output_filename = self.species_model + ".annotation.txt"
+        output_annot_file_path = os.path.join(self.output_directory, output_filename)
 
         # Check if output file already exists. Prevents accidental overwriting
         # of index files.
         if os.path.isfile(output_annot_file_path):
-            sys.exit(f"ERROR: Output annotation file formatted for CAMPAREE "
-                     f"already exists:\n    {output_annot_file_path}\n")
+            sys.exit(f"ERROR: Annotation file formatted for CAMPAREE already "
+                     f"exists:\n    {output_annot_file_path}\n")
 
         CampareeUtils.convert_gtf_to_annot_file_format(input_gtf_filename=self.annotation_gtf_filename,
                                                        output_annot_filename=output_annot_file_path)
+
+        sys.stderr.write(f"Reformatted annotation file saved as: {output_filename}\n")
 
     @staticmethod
     def main():
@@ -143,15 +148,18 @@ class FormatReferenceFilesForCamparee():
             parser.error('No operation performed. Please enter a FASTA and/or a GTF file '
                          'to format for CAMPAREE.')
 
-        camparee_index_generator = FormatReferenceFilesForCamparee(species_model=args.species_model_name,
-                                                                   genome_fasta_filename=args.genome_fasta_file,
-                                                                   annotation_gtf_filename=args.annotation_gtf_file,
-                                                                   output_directory_path=args.output_directory_path)
+        camparee_file_formatter = FormatReferenceFilesForCamparee(species_model=args.species_model_name,
+                                                                  genome_fasta_filename=args.genome_fasta_file,
+                                                                  annotation_gtf_filename=args.annotation_gtf_file,
+                                                                  output_directory_path=args.output_directory_path)
+
+        sys.stderr.write(f"Files ready for CAMPAREE saved here: "
+                         f"{camparee_file_formatter.output_directory + '/'}\n")
 
         if args.genome_fasta_file:
-            camparee_index_generator.format_fasta_file_for_camparee()
+            camparee_file_formatter.format_fasta_file_for_camparee()
         if args.annotation_gtf_file:
-            camparee_index_generator.format_gtf_file_for_camparee()
+            camparee_file_formatter.format_gtf_file_for_camparee()
 
 
 
