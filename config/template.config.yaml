@@ -58,13 +58,14 @@ resources:
 
     # FASTA file containing complete genome sequence. Each chromosome sequence
     # must be on a single line. To generate files in this format from multi-line
-    # FASTA files, use the camparee/BLAHBLAH.py utility script. If ends in ".gz",
-    # will be treated as a gzipped file.
+    # FASTA files, use the bin/format_reference_files_for_camparee.py utility
+    # script. If ends in ".gz", will be treated as a gzipped file.
     reference_genome_filename: Mus_musculus.GRCm38.dna.oneline_seqs.fa
 
     # File containing coordinates for each transcript in the annotation. This
-    # file can be built from a GTF using the BLABLAH2.py script. Chromosome
-    # names in this file must match those used in the reference genome FASTA.
+    # file can be built from a GTF using the bin/format_reference_files_for_camparee.py
+    # script. Chromosome names in this file must match those used in the reference
+    # genome FASTA.
     annotation_filename: Mus_musculus.GRCm38.93.annotation.txt
 
     # File containing a list of chromosome names and the number of homologous
@@ -72,7 +73,10 @@ resources:
     # in the reference genome FASTA and annotational files, but may be a subset.
     # Only the chromosomes specified in this file are used to generate
     # simulated transcripts. See www.smartURLdescribingEverything.com/ploidy
-    # for full details on how to create ploidy file, and how it is used.
+    # for full details on how to create ploidy file, and how it is used. The
+    # bin/format_reference_files_for_camparee.py script also has the option to
+    # create a started ploidu file that will need to be edited to account for
+    # non-diploid organisms and non-autosomal chromosomes.
     chr_ploidy_filename: Mus_musculus.GRCm38.chr_ploidy.txt
 
 ### Information concerning input samples
