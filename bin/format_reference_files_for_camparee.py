@@ -9,34 +9,50 @@ resources/ directory of this CAMPAREE install, under the species/model name
 given as part of the input.
 """
 import argparse
+import re
 import sys
 import os
 
 from camparee.camparee_constants import CAMPAREE_CONSTANTS
 from camparee.camparee_utils import CampareeUtils
 
-class GenerateCampareeIndex():
+class FormatReferenceFilesForCamparee():
 
     def __init__(self, species_model, genome_fasta_filename, annotation_gtf_filename, output_directory_path):
-        """Short summary.
+        """Constructor for FormatReferenceFilesForCamparee. Checks for existence
+        of given input files and output directories.
 
         Parameters
         ----------
         species_model : string
-            Description of parameter `species_model`.
+            Name of the species and genome build associated with the input files
+            (e.g. Mus_musculus.Ensembl_v97.GRCm38). This is used to name the
+            output directory and the output files, so it must be comply with
+            file naming conventions (i.e. only alphanumeric characters,
+            underscores, and dahses).
         genome_fasta_filename : string
-            Description of parameter `genome_fasta_filename`.
+            [OPTIONAL] Full path to input FASTA file containing the reference
+            genome sequence with line breaks embedded in its sequences.
         annotation_gtf_filename : string
-            Description of parameter `annotation_gtf_filename`.
+            [OPTIONAL] Full path the transcript annotation file in GTF format.
         output_directory_path: string
-            Description of parameter `output_directory_path`.
+            [OPTIONAL] Upper level directory to save all output files. Within this
+            directory, a new subdirectory named using the species_model argument
+            will be created to store all output files. [DEFAULT: 'resources/'
+            subdirectory in the main CAMPAREE installation directory].
 
         """
         self.species_model = species_model
         self.genome_fasta_filename = genome_fasta_filename
         self.annotation_gtf_filename = annotation_gtf_filename
 
-        # Test species_model for no spaces or special characters
+        # Test species_model for no spaces or special characters, since it will
+        # serve as the output directory name, and prefix for all output files.
+        if re.search(r'[^A-Za-z0-9_\-]', self.species_model):
+            sys.exit(f"ERROR: The species model name contains invalid characters.\n"
+                     f"       It can only contains letters, numbers, underscores,\n"
+                     f"       and dashes.\n"
+                     f"    {self.species_model}")
 
         self.output_directory = ""
         if not output_directory_path:
@@ -47,8 +63,8 @@ class GenerateCampareeIndex():
             if os.path.isdir(output_directory_path):
                 self.output_directory = os.path.join(output_directory_path, self.species_model)
             else:
-                raise Exception(f"The given output directory does not exist:\n"
-                                f"{output_directory_path}")
+                sys.exit(f"ERROR: The given output directory does not exist:\n"
+                         f"    {output_directory_path}\n")
 
         # Create output directory if it does not already exist.
         if not os.path.isdir(self.output_directory):
@@ -62,9 +78,13 @@ class GenerateCampareeIndex():
             sys.exit(f"ERROR: The given annotation GTF file does not exist:\n"
                      f"    {self.annotation_gtf_filename}\n")
 
-    # Method to format FASTA file
     def format_fasta_file_for_camparee(self):
+        """Reformats the input FASTA reference genome so there are no line breaks
+        within the sequences (i.e. sequence for a given entry is stored on a single
+        line). Uses the create_oneline_seq_fasta() method in the CampareeUtils
+        package. Result saved as a new FASTA file: [species_model].oneline_seqs.fa.
 
+        """
         output_fasta_file_path = os.path.join(self.output_directory,
                                               self.species_model + ".oneline_seqs.fa")
         # Check if output file already exists. Prevents accidental overwriting
@@ -75,8 +95,13 @@ class GenerateCampareeIndex():
 
         CampareeUtils.create_oneline_seq_fasta(self.genome_fasta_filename, output_fasta_file_path)
 
-    # Method to format GTF file
     def format_gtf_file_for_camparee(self):
+        """Reformats transcript annotation file from GTF to the tabular format
+        used internally by CAMPAREE. Uses the convert_gtf_to_annot_file_format()
+        method in the CampareeUtils package. Results saved as a new file:
+        [species_model].annotation.txt.
+
+        """
 
         output_annot_file_path = os.path.join(self.output_directory,
                                               self.species_model + ".annotation.txt")
@@ -89,8 +114,6 @@ class GenerateCampareeIndex():
 
         CampareeUtils.convert_gtf_to_annot_file_format(input_gtf_filename=self.annotation_gtf_filename,
                                                        output_annot_filename=output_annot_file_path)
-
-    # Maybe method to generate STAR index?
 
     @staticmethod
     def main():
@@ -105,7 +128,7 @@ class GenerateCampareeIndex():
         parser.add_argument('-n', '--species_model_name', required=True,
                             help="Name of the species and genome build of the input files. "
                                  "Used to name output directory and files, so it must be "
-                                 "compatible with file naming conventions.")
+                                 "comply with file naming conventions.")
         parser.add_argument('-g', '--genome_fasta_file', required=False, default="",
                             help="Path to genome sequence in FASTA format.")
         parser.add_argument('-a', '--annotation_gtf_file', required=False, default="",
@@ -120,10 +143,10 @@ class GenerateCampareeIndex():
             parser.error('No operation performed. Please enter a FASTA and/or a GTF file '
                          'to format for CAMPAREE.')
 
-        camparee_index_generator = GenerateCampareeIndex(species_model=args.species_model_name,
-                                                         genome_fasta_filename=args.genome_fasta_file,
-                                                         annotation_gtf_filename=args.annotation_gtf_file,
-                                                         output_directory_path=args.output_directory_path)
+        camparee_index_generator = FormatReferenceFilesForCamparee(species_model=args.species_model_name,
+                                                                   genome_fasta_filename=args.genome_fasta_file,
+                                                                   annotation_gtf_filename=args.annotation_gtf_file,
+                                                                   output_directory_path=args.output_directory_path)
 
         if args.genome_fasta_file:
             camparee_index_generator.format_fasta_file_for_camparee()
@@ -134,4 +157,4 @@ class GenerateCampareeIndex():
 
 
 if __name__ == '__main__':
-    sys.exit(GenerateCampareeIndex.main())
+    sys.exit(FormatReferenceFilesForCamparee.main())
