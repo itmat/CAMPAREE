@@ -1,5 +1,4 @@
 import re
-from io import StringIO
 import os
 import gzip
 import itertools
@@ -27,10 +26,20 @@ class CampareeUtils:
             Path to output FASTA file to create, where single line sequences
             will be stored.
 
+        Returns
+        -------
+        set
+            Set of unique chromosome/contig names contained in input FASTA file.
+
         """
-        # Build regex recognice FASTA header line and store chromosome/contig
-        # name in the first group. Chromosome/contig name defined as all non-space
-        # characters between ">" and the first whitespace character.
+        # Use set to track unique chromosomes/contigs since it automatically
+        # handles duplicate removal.
+        chromosomes = set()
+
+        # Build regex to recognize FASTA header line and store chromosome/contig
+        # name (i.e. sequence identifier) in the first group. Chromosome/contig
+        # name defined as all non-space characters between ">" and the first
+        # whitespace character.
         fasta_header_pattern = re.compile(r'>([^\s]*).*')
 
         # Flag to denote when a FASTA sequence (and not a header) is being
@@ -49,8 +58,9 @@ class CampareeUtils:
                         output_fasta_file.write('\n')
                         building_sequence = False
 
-                    fasta_header = re.match(fasta_header_pattern, line).group(1)
-                    output_fasta_file.write('>' + fasta_header + '\n')
+                    sequence_id = re.match(fasta_header_pattern, line).group(1)
+                    output_fasta_file.write('>' + sequence_id + '\n')
+                    chromosomes.add(sequence_id)
 
                 else:
                     output_fasta_file.write(line.rstrip('\n').upper())
@@ -58,6 +68,8 @@ class CampareeUtils:
 
             # Add line break to end of output oneline fasta file.
             output_fasta_file.write("\n")
+
+        return chromosomes
 
     @staticmethod
     def create_genome(genome_file_path):
@@ -171,7 +183,17 @@ class CampareeUtils:
         output_annot_filename : string
             Path to output file in annotation format.
 
+        Returns
+        -------
+        set
+            Set of unique chromosome/contig names contained in input GTF file.
+            Only GTF entries of "exon" feature type contribute to this set.
+
         """
+        # Use set to track unique chromosomes/contigs since it automatically
+        # handles duplicate removal.
+        chromosomes = set()
+
         with open(input_gtf_filename, 'r') as gtf_file, \
                 open(output_annot_filename, 'w') as output_annot_file:
 
@@ -226,6 +248,7 @@ class CampareeUtils:
                 genesymbol = genesymbol_pattern.search(line_data[8]).group(1)
             if biotype_pattern.search(line_data[8]):
                 biotype = biotype_pattern.search(line_data[8]).group(1)
+            chromosomes.add(chrom)
 
             #process the remainder of the GTF file
             for line in gtf_file:
@@ -276,6 +299,7 @@ class CampareeUtils:
                             biotype = biotype_pattern.search(line_data[8]).group(1)
                         else:
                             biotype = "None"
+                        chromosomes.add(chrom)
 
                     #This exon is strill from the same transcript.
                     else:
@@ -306,6 +330,8 @@ class CampareeUtils:
                     biotype=biotype
                 )
             )
+
+        return chromosomes
 
 
 class CampareeException(Exception):
