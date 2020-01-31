@@ -170,7 +170,7 @@ class FormatReferenceFilesForCamparee():
         # sex chromosomes sorted last).
         sorted_chromosomes = ChromosomeSort.sort_chromosome_name_list(chromosomes)
 
-        with open(output_ploidy_file_path, 'w') as ploidy_file:
+        with CampareeUtils.open_file(output_ploidy_file_path, 'w') as ploidy_file:
 
             # Print ploidy file header
             ploidy_file.write(ploidy_output_format.replace('{', '').replace('}', ''))
@@ -183,7 +183,7 @@ class FormatReferenceFilesForCamparee():
                          "entered as autosomes from a diploid organism\n"
                          "      (two copies in both males and females). You will "
                          "need to manually edit entries for any\n"
-                         "      chromosomes that deviate from pattern (e.g. "
+                         "      chromosomes that deviate from this pattern (e.g. "
                          "mitochondrial and sex chromosomes).\n\n")
 
     @staticmethod
@@ -195,7 +195,9 @@ class FormatReferenceFilesForCamparee():
 
         """
         parser = argparse.ArgumentParser(description='Format genome FASTA and/or annotation'
-                                                     ' GTF files for use with CAMPAREE.')
+                                                     ' GTF files for use with CAMPAREE.'
+                                                     'Gzipped input files supported if they'
+                                                     ' have ".gz" extensions.')
         parser.add_argument('-n', '--species_model_name', required=True,
                             help="Name of the species and genome build of the input files. "
                                  "Used to name output directory and files, so it must be "

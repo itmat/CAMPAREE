@@ -48,8 +48,8 @@ class CampareeUtils:
 
         # Input FASTA lines saved directly to output file as they are processed
         # to minimize the amount of data stored in memory at a given time.
-        with open(input_fasta_file_path, 'r') as input_fasta_file, \
-             open(output_oneline_fasta_file_path, 'w') as output_fasta_file:
+        with CampareeUtils.open_file(input_fasta_file_path, 'r') as input_fasta_file, \
+             CampareeUtils.open_file(output_oneline_fasta_file_path, 'w') as output_fasta_file:
 
             for line in input_fasta_file:
                 if line.startswith(">"):
@@ -194,8 +194,8 @@ class CampareeUtils:
         # handles duplicate removal.
         chromosomes = set()
 
-        with open(input_gtf_filename, 'r') as gtf_file, \
-                open(output_annot_filename, 'w') as output_annot_file:
+        with CampareeUtils.open_file(input_gtf_filename, 'r') as gtf_file, \
+                CampareeUtils.open_file(output_annot_filename, 'w') as output_annot_file:
 
             #Print annot file header (note the '#' prefix)
             output_annot_file.write("#" + CampareeUtils.annot_output_format.replace('{', '').replace('}', ''))
@@ -333,6 +333,47 @@ class CampareeUtils:
 
         return chromosomes
 
+    @staticmethod
+    def open_file(filename, mode='r'):
+        """Helper method which can open gzipped files by checking the filename
+        for the '.gz' extension. If no '.gz' extension found, this method uses
+        the standard open() function.
+
+        Parameters
+        ----------
+        filename : string
+            Name of the file to open. If this filename has a '.gz' extension,
+            the function uses the gzip package. If not, it uses open() function.
+        mode : string
+            Access mode (e.g. 'r' - read, 'w' - write) passed to the open function.
+            Note, to open a file in binary mode, need to explicitly end the mode
+            code with a 'b'. [DEFAULT: 'r' - open file for reading in text mode].
+
+        Returns
+        -------
+        file object
+            Pointer to the opened file.
+
+        """
+        file_pointer = None
+
+        # gzip.open defaults to opening files in binary modes and requires
+        # explicit inclusion of 't' in the mode to open it as text. However,
+        # the built-in open() function defaults to text mode. To normalize the
+        # behavior between these two methods to match the built-in open(), the
+        # code here checks for the presence of a 'b' (for binary mode). If
+        # there's no 'b' or 't', the code appends a 't', so the mode will
+        # always default to text mode.
+        updated_mode = mode
+        if 'b' not in updated_mode.lower() and 't' not in updated_mode.lower():
+            updated_mode = updated_mode + 't'
+
+        if filename.endswith('.gz'):
+            file_pointer = gzip.open(filename=filename, mode=updated_mode)
+        else:
+            file_pointer = open(file=filename, mode=updated_mode)
+
+        return file_pointer
 
 class CampareeException(Exception):
     """Base class for other Camparee exceptions."""
