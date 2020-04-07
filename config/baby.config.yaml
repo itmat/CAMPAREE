@@ -226,6 +226,12 @@ steps:
     # this step requires at least two input samples to perform phasing. This step
     # is skipped for samples where 'pooled' is set to 'True'.
     'beagle.BeagleStep':
+        parameters:
+            # Force Beagle to run with a single thread (by default it uses the
+            # system's settings to determine the number of threads). This avoids
+            # memory allocation errors arising from conflicts with glibc, java,
+            # and multiple threads on some SGE systems.
+            nthreads: 1
     # Build parental genome sequences based on the variants identified from the
     # input samples. This step is skipped for samples where 'pooled' is set to
     # 'True'.

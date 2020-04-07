@@ -2,6 +2,7 @@ import subprocess
 import argparse
 import sys
 import os
+import json # Required to package and read beagle options for command line call
 
 from camparee.abstract_camparee_step import AbstractCampareeStep
 from camparee.camparee_utils import CampareeException
@@ -27,11 +28,19 @@ class BeagleStep(AbstractCampareeStep):
     #Name of file where script logging stored.
     BEAGLE_LOG_FILENAME = CAMPAREE_CONSTANTS.BEAGLE_LOG_FILENAME
 
-    def __init__(self, log_directory_path, data_directory_path, parameters=None):
+    def __init__(self, log_directory_path, data_directory_path, parameters=dict()):
         self.data_directory_path = data_directory_path
         self.log_directory_path = log_directory_path
+        self.beagle_cmd_options = parameters
 
     def validate(self):
+        invalid_beagle_parameters = ["gt", "out", "seed"]
+        for key, value in self.beagle_cmd_options.items():
+            if key in invalid_beagle_parameters:
+                print(f"Beagle parameter {key} with value {value} cannot be"
+                      f" used as a Beagle option since the value is already"
+                      f" determined by the bealge.py script.")
+                return False
         return True
 
     def execute(self, beagle_jar_path, seed=None):
@@ -53,7 +62,10 @@ class BeagleStep(AbstractCampareeStep):
         log_file_path = os.path.join(self.log_directory_path, BeagleStep.BEAGLE_LOG_FILENAME)
         command = f"java -jar {beagle_jar_path} gt={input_file_path} out={output_file_path}"
         if seed is not None:
-            command += f" seed={seed}"
+            command += f" seed={seed} "
+        if self.beagle_cmd_options:
+            command += ' '.join( f"{key}={value}" for key,value in self.beagle_cmd_options.items() )
+
         with open(log_file_path, "w") as log_file:
             #TODO update the output here to make proper use of Python's logging
             #     module and functionality (it manages dual writing to both
@@ -117,6 +129,8 @@ class BeagleStep(AbstractCampareeStep):
 
         if seed is not None:
             command += f" --seed {seed}"
+        if self.beagle_cmd_options:
+            command += f" --beagle_parameters '{json.dumps(self.beagle_cmd_options)}'"
 
         return command
 
@@ -156,14 +170,21 @@ class BeagleStep(AbstractCampareeStep):
 
         parser = argparse.ArgumentParser(description='Command line wrapper around'
                                                      ' the Beagle step')
-        parser.add_argument('--log_directory_path')
-        parser.add_argument('--data_directory_path')
-        parser.add_argument('--beagle_jar_path')
-        parser.add_argument('--seed', type=int, default=None)
+        parser.add_argument('--log_directory_path', required=True,
+                            help="Directory in which to save logging files.")
+        parser.add_argument('--data_directory_path', required=True,
+                            help="Directory in which to save output files.")
+        parser.add_argument('--beagle_jar_path', required=True,
+                            help="Path to Beagle jar file.")
+        parser.add_argument('--seed', type=int, required=False, default=None,
+                            help='Seed value for random number generator.')
+        parser.add_argument('--beagle_parameters', required=False, default=None,
+                            help="Jsonified Beagle parameters.")
         args = parser.parse_args()
-
-        beagle_step = BeagleStep(args.log_directory_path,
-                                 args.data_directory_path)
+        parameters = json.loads(args.beagle_parameters)
+        beagle_step = BeagleStep(log_directory_path=args.log_directory_path,
+                                 data_directory_path=args.data_directory_path,
+                                 parameters=parameters)
         beagle_step.execute(beagle_jar_path=args.beagle_jar_path,
                             seed=args.seed)
 
