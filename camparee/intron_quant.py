@@ -90,9 +90,12 @@ class IntronQuantificationStep(AbstractCampareeStep):
                     strand = "+" if read1_reverse_aligned else "-"
                 antisense_strand = "-" if strand is "+" else "+"
 
-                mintron_starts, mintron_ends = self.info.mintron_extents_by_chrom[chrom, strand]
-                antisense_mintron_starts, antisense_mintron_ends = self.info.mintron_extents_by_chrom[chrom, antisense_strand]
-                intergenic_starts, intergenic_ends = self.info.intergenic_extents_by_chrom[chrom]
+                # Use get() method to prevent KeyError if any of these data structures
+                # are empty. This can occur for small chromosomes and non-standard
+                # contigs.
+                mintron_starts, mintron_ends = self.info.mintron_extents_by_chrom.get((chrom, strand), [None, None])
+                antisense_mintron_starts, antisense_mintron_ends = self.info.mintron_extents_by_chrom.get((chrom, antisense_strand), [None, None])
+                intergenic_starts, intergenic_ends = self.info.intergenic_extents_by_chrom.get(chrom, [None, None])
 
                 mintrons_touched = set()
                 antisense_mintrons_touched = set()
@@ -103,43 +106,51 @@ class IntronQuantificationStep(AbstractCampareeStep):
                     # NOTE: pysam is working in 0-based, half-open coordinates! We are using 1-based
                     start = start + 1
 
-                    # We may intersect this mintron, depending on where its end lies
-                    # or this could be -1 if we start before all mintrons
-                    last_mintron_before = numpy.searchsorted(mintron_starts, start, side="right") - 1
+                    # If any mintrons were found in the current chromosome/strand
+                    if mintron_starts is not None and mintron_ends is not None:
+                        # We may intersect this mintron, depending on where its end lies
+                        # or this could be -1 if we start before all mintrons
+                        last_mintron_before = numpy.searchsorted(mintron_starts, start, side="right") - 1
 
-                    # We definitely do not intersect this mintron, it starts after our end
-                    first_mintron_after = numpy.searchsorted(mintron_starts, end, side="right")
-                    # but all between the two, we do intersect
+                        # We definitely do not intersect this mintron, it starts after our end
+                        first_mintron_after = numpy.searchsorted(mintron_starts, end, side="right")
+                        # but all between the two, we do intersect
 
-                    if last_mintron_before == -1:
-                        # No introns start before us
-                        mintrons_touched.update(range(0, first_mintron_after))
-                    elif mintron_ends[last_mintron_before] >= start:
-                        # We do intersect the last one to start before us
-                        mintrons_touched.update(range(last_mintron_before, first_mintron_after))
-                    else:
-                        # We only start intersecting the first one after that
-                        mintrons_touched.update(range(last_mintron_before + 1, first_mintron_after))
+                        if last_mintron_before == -1:
+                            # No introns start before us
+                            mintrons_touched.update(range(0, first_mintron_after))
+                        elif mintron_ends[last_mintron_before] >= start:
+                            # We do intersect the last one to start before us
+                            mintrons_touched.update(range(last_mintron_before, first_mintron_after))
+                        else:
+                            # We only start intersecting the first one after that
+                            mintrons_touched.update(range(last_mintron_before + 1, first_mintron_after))
 
-                    # Now do the same thing as above for antisense regions
-                    last_antisense_mintron_before = numpy.searchsorted(antisense_mintron_starts, start, side="right") - 1
-                    first_antisense_mintron_after = numpy.searchsorted(antisense_mintron_starts, end, side="right")
-                    if last_antisense_mintron_before == -1:
-                        antisense_mintrons_touched.update(range(0, first_antisense_mintron_after))
-                    elif antisense_mintron_ends[last_antisense_mintron_before] >= start:
-                        antisense_mintrons_touched.update(range(last_antisense_mintron_before, first_antisense_mintron_after))
-                    else:
-                        antisense_mintrons_touched.update(range(last_antisense_mintron_before + 1, first_antisense_mintron_after))
+                    # If any antisense mintrons were found in the current chromosome/strand
+                    if antisense_mintron_starts is not None and antisense_mintron_ends is not None:
+                        # Now do the same thing as above for antisense regions
+                        last_antisense_mintron_before = numpy.searchsorted(antisense_mintron_starts, start, side="right") - 1
+                        first_antisense_mintron_after = numpy.searchsorted(antisense_mintron_starts, end, side="right")
+                        if last_antisense_mintron_before == -1:
+                            antisense_mintrons_touched.update(range(0, first_antisense_mintron_after))
+                        elif antisense_mintron_ends[last_antisense_mintron_before] >= start:
+                            antisense_mintrons_touched.update(range(last_antisense_mintron_before, first_antisense_mintron_after))
+                        else:
+                            antisense_mintrons_touched.update(range(last_antisense_mintron_before + 1, first_antisense_mintron_after))
 
-                    # Now do the same thing as above for intergenic regions
-                    last_intergenic_before = numpy.searchsorted(intergenic_starts, start, side="right") - 1
-                    first_intergenic_after = numpy.searchsorted(intergenic_starts, end, side="right")
-                    if last_intergenic_before == -1:
-                        intergenics_touched.update(range(0, first_intergenic_after))
-                    elif intergenic_ends[last_intergenic_before] >= start:
-                        intergenics_touched.update(range(last_intergenic_before, first_intergenic_after))
-                    else:
-                        intergenics_touched.update(range(last_intergenic_before + 1, first_intergenic_after))
+                    # If any intergenic regions were found in the current chromosome
+                    # (should only be an issue for small contigs, some prokaryotic
+                    # genomes, and other less common cases)
+                    if intergenic_starts is not None and intergenic_ends is not None:
+                        # Now do the same thing as above for intergenic regions
+                        last_intergenic_before = numpy.searchsorted(intergenic_starts, start, side="right") - 1
+                        first_intergenic_after = numpy.searchsorted(intergenic_starts, end, side="right")
+                        if last_intergenic_before == -1:
+                            intergenics_touched.update(range(0, first_intergenic_after))
+                        elif intergenic_ends[last_intergenic_before] >= start:
+                            intergenics_touched.update(range(last_intergenic_before, first_intergenic_after))
+                        else:
+                            intergenics_touched.update(range(last_intergenic_before + 1, first_intergenic_after))
 
                 # Accumulate the reads
                 for mintron_index in mintrons_touched:
@@ -202,7 +213,7 @@ class IntronQuantificationStep(AbstractCampareeStep):
             antisense_counts = 0
             total_length = 0
             for intron in non_flank_introns:
-                # We use normalized_counts here and then "unnormalize" them by effective length since we have 
+                # We use normalized_counts here and then "unnormalize" them by effective length since we have
                 # already performed the correction of the above section (removing non-primary intron counts)
                 sense_counts  += self.intron_normalized_counts[intron] * intron.effective_length
                 antisense_counts  += self.intron_normalized_antisense_counts[intron] * intron.effective_length

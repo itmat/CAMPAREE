@@ -252,7 +252,9 @@ class AnnotationInfo:
             # Now add in anti-sense if necessary
             # Sense gets preference so annotate only if no sense annotation already exists
             antisense_strand = "+" if strand == "-" else "-"
-            for transcript in self.transcripts_by_chrom[chrom, antisense_strand]:
+            # Use .get() to avoid a KeyError if there are no transcripts on the given
+            # chromosome/strand (like small chromsomes and non-standard contigs).
+            for transcript in self.transcripts_by_chrom.get((chrom, antisense_strand), []):
                 for intron in transcript.introns:
                     # Find corresponding mintrons
                     # first find the one that starts before us, which we may or may not intersect
