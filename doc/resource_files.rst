@@ -132,7 +132,8 @@ upodate the *resources* section of the config file to point to each of the
 resource files. Here are example commands for download and installing resource
 files for the mouse genome with Ensembl gene models:
 
-.. code-block:: console
+.. code-block:: none
+
     # Navigate to CAMPAREE resources directory
     cd /path/to/CAMPAREE/resources
 

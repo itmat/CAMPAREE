@@ -9,6 +9,7 @@ User Guide
 
    introduction
    quick_start
+   running_camparee
    resource_files
 
 The API Reference
