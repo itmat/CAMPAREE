@@ -1,7 +1,7 @@
 Running CAMPAREE
 ================
 
-.. _installation-ref:
+.. _running-installation:
 
 Installation
 ------------
@@ -40,7 +40,7 @@ installation of Python may require slight modifications to the commands below.
     pip install -e .
     pip install -e ../BEERS_UTILS
 
-6. Prepare/install resource files for the organism of choice (see full instructions in *Resource Files* section)
+6. Prepare/install resource files for the organism of choice (see full instructions in :ref:`Resource Files <resource-pre-built>` section)
 
 
 Command Line Options
@@ -134,7 +134,7 @@ machine, like the r4.2xlarge (8 vCPUs; 61 GiB RAM).
     sudo apt-get update && sudo apt-get -y upgrade
     sudo apt-get -y install openjdk-8-jre python3-venv python3-pip
 
-5. Follow CAMPAREE installation instructions :ref:`above <installation-ref>`. Note, you can test the install using the 'Baby Genome' as described in the :ref:`quick start guide <quick-start-guide-ref>`.
+5. Follow CAMPAREE installation instructions :ref:`above <running-installation>`. Note, you can test the install using the 'Baby Genome' as described in the :ref:`quick start guide <quick-start-baby-genome>`.
 
 6. Prepare CAMPAREE config file, making sure to set ``scheduler_mode:`` to 'serial'.
 
@@ -190,13 +190,13 @@ RAM), should be adequate.
 
     pcluster ssh camparee-cluster -i /path/to/AWS_key_file.pem
 
-6. Install CAMPAREE on the cluster using the instructions listed above. Note, the prerequisites were already handled by the post-install script. You can test the install using the 'Baby Genome' as described in the quick start guide.
+6. Install CAMPAREE on the cluster using the instructions listed :ref:`above <running-installation>`. Note, the prerequisites were already handled by the post-install script. You can test the install using the 'Baby Genome' as described in the :ref:`quick start guide <quick-start-baby-genome>`.
 
 7. Prepare CAMPAREE config file, making sure to set ``scheduler_mode:`` to 'sge'.
 
 8. CAMPAREE is now ready to run in **sge** mode.
 
-When you have finish running CAMPAREE and have transferred all data off of the
+When you have finished running CAMPAREE and have transferred all data off of the
 cluster, you can shut down and delete the cluster with the following command::
 
     pcluster delete camparee-cluster

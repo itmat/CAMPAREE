@@ -1,4 +1,4 @@
-.. _quick-start-guide-ref:
+.. _quick-start-guide:
 
 Quick Start Guide
 =================
@@ -46,6 +46,8 @@ Next, install the BEERS_UTILS package that CAMPAREE uses::
 
 Note that we currently require the use of the ``-e`` flag during these installs,
 otherwise CAMPAREE will not run successfully.
+
+.. _quick-start-baby-genome:
 
 Baby Genome
 -----------

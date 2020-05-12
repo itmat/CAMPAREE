@@ -12,10 +12,11 @@ default, these files are stored in the ``resources/`` subdirectory of the
 CAMPAREE installation directory, though this can be changed in the CAMPAREE
 config file. A collection of resource files is derived from a specific build of
 an organism's genome and corresponding transcript annotation. We have prepared
-collections of pre-built resource files for several commonly-sequenced
-organisms, available for download and use with CAMPAREE. Additionally, CAMPAREE
-comes bundled with utilities to generate custom resource files for users who
-want to simulated data from organisms/genome builds not available as pre-built
+collections of :ref:`pre-built resource files <resource-pre-built>` for several
+commonly-sequenced organisms, available for download and use with CAMPAREE.
+Additionally, CAMPAREE comes bundled with utilities to
+:ref:`generate custom resource files <resource-gen-custom>` for users who want
+to simulated data from organisms/genome builds not available as pre-built
 resource files.
 
 
@@ -24,11 +25,13 @@ File Descriptions
 
 For organizational purposes, all CAMPAREE resource files should be associated
 with a specific species/model identifier, that ideally includes the organism
-name, as well as the genome and annotations builds and versions. For example,
+name, as well as the genome and annotation builds and versions. For example,
 the pre-built resource files for *MusMusculus_GRCm38_Ensemblv99* were generated
 from the GRCm38 build of the mouse genome sequence and corresponding transcript
 models from version 99 of Ensembl. Here are specifics on the formatting for each
 of the different resource files.
+
+.. _resource-genome:
 
 Reference Genome Sequence File
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -37,10 +40,12 @@ The reference genome sequence is stored as plain-text in FASTA format. Each
 entry in the file corresponds to a single chromosome or contig. The sequence for
 each chromosome/contig is stored on a single line. The header line (starting
 with a ">" character) for each entry contains the chromosome/contig identifier
-and must match the chromosome/contig identifiers used in both the annotation and
-chromosome ploidy files. CAMPAREE can process this file if it is uncompressed or
-if it is gzipped. Gzipped files must end with the ".gz" extension to be
-processed correctly.
+and must match the chromosome/contig identifiers used in both the
+:ref:`annotation <resource-annotation>` and :ref:`chromosome ploidy files <resource-ploidy>`.
+CAMPAREE can process this file if it is uncompressed or if it is gzipped. Gzipped
+files must end with the ".gz" extension to be processed correctly.
+
+.. _resource-annotation:
 
 Transcript Annotation File
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -50,7 +55,8 @@ tab-delimited format, derived from the UCSC BED format. The annotation file
 contains eleven columns:
 
 1. chromosome/contig identifier
-    match identifiers used in sequence and ploidy files
+    match identifiers used in :ref:`sequence <_resource-genome>` and
+    :ref:`ploidy <resource-ploidy>` files.
 2. strand
     Genomic strand from which the transcript is transcribed. Either "+" or "-".
 3. txStart
@@ -88,6 +94,8 @@ contains eleven columns:
      Biotype / functional classification for current gene, or 'None'. This is
      not currently used by CAMPAREE.
 
+.. _resource-ploidy:
+
 Chromosome Ploidy File
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -98,20 +106,22 @@ it needs the organization and number of chromosomes in each gender of the
 simulated organisms. While most chromosomes will have two copies, regardless of
 gender, the sex and mitochondrial chromosomes often deviate from this pattern in
 a species-dependent fashion. The chromosome/contig identifiers in this file must
-match those used in the genome sequence and annotation files. However, any
-chromosome/contig identifiers omitted from the ploidy file will not be used by
-CAMPAREE (i.e. no transcripts will be simulated from omitted
-chromosome/contigs). This allows users broad control over which
-chromosomes/contigs CAMPAREE uses. For example, all of the pre-built resource
-files use ploidy files that limit CAMPAREE to the standard chromosomes
-(numbered/lettered, sex, and mitochondrial). For examples, please refer to the
-ploidy file for the baby genome, packaged in the ``resources/baby_genome.mm10/``
-subdirectory of the CAMPAREE install directory, or to one of the ploidy files
-packaged with the pre-built resource files.
+match those used in the :ref:`genome sequence <resource-genome>` and
+:ref:`annotation <resource-annotation>` files. However, any chromosome/contig
+identifiers omitted from the ploidy file will not be used by CAMPAREE (i.e. no
+transcripts will be simulated from omitted chromosome/contigs). This allows users
+broad control over which chromosomes/contigs CAMPAREE uses. For example, all of
+the :ref:`pre-built resource files <resource-pre-built>` use ploidy files that
+limit CAMPAREE to the standard chromosomes (numbered/lettered, sex, and
+mitochondrial). For examples, please refer to the ploidy file for the baby genome,
+packaged in the ``resources/baby_genome.mm10/`` subdirectory of the CAMPAREE
+install directory, or to one of the ploidy files packaged with the pre-built
+resource files.
 
 STAR Genome Index
 ^^^^^^^^^^^^^^^^^
 
+.. _resource-pre-built:
 
 Pre-Built Resource Files
 ------------------------
@@ -125,10 +135,12 @@ This includes md5sums for each resource file, the command used to build the
 resource files, the command use to build the STAR Genome Index, and the sources/
 URLs and versions for the reference genome and gene models used to build the
 resource files. Effectively, the README file contains all information a user
+would need to report with a publication or to rebuild the resource files from
+scratch.
 
-To use the pre-build resource files, download and unpackage them in the
+To use the pre-built resource files, download and unpackage them in the
 ``resources/`` subdirectory of the CAMPAREE installation directory, and then
-upodate the *resources* section of the config file to point to each of the
+update the *resources* section of the config file to point to each of the
 resource files. Here are example commands for download and installing resource
 files for the mouse genome with Ensembl gene models:
 
@@ -145,6 +157,7 @@ files for the mouse genome with Ensembl gene models:
     tar -xvzf MusMusculus_GRCm38_Ensemblv99__Resource_files.tar.gz
     tar -xvzf MusMusculus_GRCm38_Ensemblv99__STAR_index.tar.gz
 
+.. _resource-built-urls:
 
 Download Links for Pre-Built Resource Files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -159,6 +172,8 @@ HomoSapiens_GRCh38_Ensemblv99 (Built 2020-03-30)
 - `Resource files <https://itmat.data-simulators.s3.amazonaws.com/BEERS2/CAMPAREE_RESOURCE_FILES/HomoSapiens_GRCh38_Ensemblv99__Resource_files.tar.gz>`_
 - `STAR index <https://itmat.data-simulators.s3.amazonaws.com/BEERS2/CAMPAREE_RESOURCE_FILES/HomoSapiens_GRCh38_Ensemblv99__STAR_index.tar.gz>`_
 
+
+.. _resource-gen-custom:
 
 Generating Custom Resource Files
 --------------------------------
