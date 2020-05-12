@@ -1,3 +1,5 @@
+.. _quick-start-guide-ref:
+
 Quick Start Guide
 =================
 

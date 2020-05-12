@@ -1,6 +1,8 @@
 Running CAMPAREE
 ================
 
+.. _installation-ref:
+
 Installation
 ------------
 
@@ -132,7 +134,7 @@ machine, like the r4.2xlarge (8 vCPUs; 61 GiB RAM).
     sudo apt-get update && sudo apt-get -y upgrade
     sudo apt-get -y install openjdk-8-jre python3-venv python3-pip
 
-5. Follow CAMPAREE installation instructions listed above. Note, you can test the install using the 'Baby Genome' as described in the quick start guide.
+5. Follow CAMPAREE installation instructions :ref:`above <installation-ref>`. Note, you can test the install using the 'Baby Genome' as described in the :ref:`quick start guide <quick-start-guide-ref>`.
 
 6. Prepare CAMPAREE config file, making sure to set ``scheduler_mode:`` to 'serial'.
 
