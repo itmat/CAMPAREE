@@ -38,14 +38,12 @@ Install required libraries::
 
 Install CAMPAREE package in your Python environment::
 
-    pip install -e .
+    pip install .
 
 Next, install the BEERS_UTILS package that CAMPAREE uses::
 
-    pip install -e ../BEERS_UTILS
+    pip install ../BEERS_UTILS
 
-Note that we currently require the use of the ``-e`` flag during these installs,
-otherwise CAMPAREE will not run successfully.
 
 .. _quick-start-baby-genome:
 
@@ -91,8 +89,18 @@ Check Results
 
 When the run completes, all output will be saved to
 ``CAMPAREE/test_data/results/run_1/``. The final outputs will be in the text
-files ``test_data/results/run_1/CAMPAREE/data/sample1/molecule_file`` and
-``test_data/results/run_1/CAMPAREE/data/sample2/molecule_file``. Each line
+files ``test_data/results/run_1/CAMPAREE/data/sample1/molecule_file.txt`` and
+``test_data/results/run_1/CAMPAREE/data/sample2/molecule_file.txt``. Each line
 (after the header line) corresponds to the sequence of a single simulated
 molecule in a tab-delimited format. The default config file outputs 10000
 molecules.
+
+Validate the contents of these files by running the following md5sum command in
+the CAMPAREE install directory::
+
+    md5sum test_data/results/run_1/CAMPAREE/data/sample*/molecule_file.txt
+
+The output of this command should match the following md5sum values::
+
+    191b3bc373bade1b764783741faccefe  sample1/molecule_file.txt
+    8f1eb53067ad4ad6c17d39baa9934599  sample2/molecule_file.txt

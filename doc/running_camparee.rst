@@ -37,10 +37,12 @@ installation of Python may require slight modifications to the commands below.
 
 5. Install CAMPAREE and BEERS_UTILS packages in the Python environment::
 
-    pip install -e .
-    pip install -e ../BEERS_UTILS
+    pip install .
+    pip install ../BEERS_UTILS
 
-6. Prepare/install resource files for the organism of choice (see full instructions in :ref:`Resource Files <resource-pre-built>` section)
+6. [Optional] Validate installation using the 'Baby Genome' as described in the :ref:`quick start guide <quick-start-baby-genome>`.
+
+7. Prepare/install resource files for the organism of choice (see full instructions in :ref:`Resource Files <resource-pre-built>` section)
 
 
 Command Line Options
@@ -101,40 +103,66 @@ Single Instance in Serial Mode
 By checking out a single, high-memory machine, users can run CAMPAREE on AWS in
 serial mode. Note, the instructions listed here for checking out an AWS instance
 rely mostly on the default settings. Users with managed AWS accounts may need
-to alter their accounts to allow them to checkout out instances, and/or adapt
-these instructions to work within their accounts restrictions.
+to alter their accounts to allow them to checkout instances, and/or adapt these
+ instructions to work within their accounts' restrictions.
 
-As RAM tends to be the bottle neck for most CAMPAREE processes, rather than the
+As RAM tends to be the bottleneck for most CAMPAREE processes, rather than the
 number of CPU cores, we recommend users select a `Memory Optimized <https://aws.amazon.com/ec2/instance-types/>`_
 machine, like the r4.2xlarge (8 vCPUs; 61 GiB RAM).
 
-1. Configure and checkout the AWS instance
+1. Go to the `EC2 management console <https://aws.amazon.com/console/>`_ to begin
+   launching an AWS instance. Note, the current AWS region for your account is
+   indicated at the top of the Management Console, to the left of the 'Support'
+   menu. Any instances you create will launch in this region, so select a region
+   that contains both the instance type, and the security key you wish to use.
 
-    AMI:
-        ami-07ebfd5b3428b6f4d (64-bit x86) - Ubuntu Server 18.04 LTS (HVM), SSD Volume Type
+2. Use the following configureation for the AWS instance:
+
+    AMI: 'Ubuntu Server 18.04 LTS (HVM), SSD Volume Type'
+        AMIs will vary by AWS region. Enter the above name in the AMI search bar
+        to find the AMI specific to your region. Here are specific AMIs for the
+        four AWS regions in the US.
+
+        ========== ==========
+        AWS Region    AMI
+        ========== ==========
+        us-east-1  ami-07ebfd5b3428b6f4d (64-bit x86)
+        us-east-2  ami-07c1207a9d40bc3bd (64-bit x86)
+        us-west-1  ami-0f56279347d2fa43e (64-bit x86)
+        us-west-2  ami-003634241a8fcdec0 (64-bit x86)
+        ========== ==========
 
     Configure Instance Details (defaults except for the following):
         - Network: Depends on user's account.
-        - Subnet: Depends on user's account. Must be in same region as the desired key pair.
+        - Subnet: Depends on user's account. Must be in same region as the
+          desired key pair.
         - Auto-assign Public IP: Enable
 
     Add Storage:
         Default volume:
             Size: *Still working out recommendations based on input size*
 
+    [Optional] Add Tags:
+        Key: 'Name', Value: 'CAMPAREE'
+
+    Configure Security Group:
+        Depends on user's account.
+
     Select Key pair:
-        Choose an existing key pair (will only display options from the same regions as the subnet selected above).
+        Choose an existing key pair (will only display options from the same
+        regions as the subnet selected above).
 
-2. Confirm instance details and wait for instance to enter running state.
+2. Confirm instance details, launch, and wait for the instance to enter running state.
 
-3. Login to instance with ssh (requires the \*.pem file associated with the key selected above).
+3. Login to instance with ssh (requires the \*.pem file associated with the key
+   selected above).
 
 4. Install CAMPAREE pre-requisites::
 
     sudo apt-get update && sudo apt-get -y upgrade
     sudo apt-get -y install openjdk-8-jre python3-venv python3-pip
 
-5. Follow CAMPAREE installation instructions :ref:`above <running-installation>`. Note, you can test the install using the 'Baby Genome' as described in the :ref:`quick start guide <quick-start-baby-genome>`.
+5. Follow CAMPAREE installation instructions :ref:`above <running-installation>`.
 
 6. Prepare CAMPAREE config file, making sure to set ``scheduler_mode:`` to 'serial'.
 
@@ -155,9 +183,15 @@ machines, like the r4.2xlarge, for the compute nodes on the ParallelCluster. For
 the master node, a machine with lower specs, like the m5.large (2 vCPUs; 8 GiB
 RAM), should be adequate.
 
-1. Install AWS ParallelCluster and its prerequisites according to `these instructions <https://docs.aws.amazon.com/parallelcluster/latest/ug/install.html>`_.
+Note, these instructions were last tested using ParallelCluster version 2.6.1.
 
-2. Configure ParallelCluster by running the ``pcluster configure`` command and entering the following options
+1. Install AWS Command Line Interface (CLI) version 2 following `these instructions <https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html>`_.
+
+2. Configure AWS CLI following `these instructions <https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html#cli-quick-configuration>`_, entering a region matching the desired AWS key pair.
+
+3. Install AWS ParallelCluster following to `these instructions <https://docs.aws.amazon.com/parallelcluster/latest/ug/install.html>`_.
+
+4. Configure ParallelCluster by running the ``pcluster configure`` command and entering the following options
 
     - AWS Region ID: <enter region matching desired AWS key pair>
     - EC2 Key Pair Name: <select desired AWS key pair>
@@ -171,30 +205,48 @@ RAM), should be adequate.
     - Network Configuration: Master in a public subnet and compute fleet in a private subnet
     - Automate Subnet creation? y
 
-3. Add custom startup script to the ParallelCluster config.
+5. Edit ParalleleCluster config to add a custom startup script and request additional memory.
 
-    ParallelCluster supports post-install scripts that run on each of the nodes
-    after they've been added to the cluster. This script will install all of
-    CAMPAREE's prerequisites. Start by opening the ParallelCluster config file
-    (generally located at ``~/.parallelcluster/config``) with a text editor.
-    Append the following lines to the end of the ``[cluster default]`` section
-    of the config file::
+    Start by opening the ParallelCluster config file (generally located at
+    ``~/.parallelcluster/config``) with a text editor.
+
+    - Custom startup script:
+        ParallelCluster supports post-install scripts that run on each of the
+        nodes after they've been added to the cluster. This script will install
+        all of CAMPAREE's prerequisites. Append the following line to the end of
+        the ``[cluster default]`` section of the config file::
 
             post_install = s3://itmat.data-simulators/parallelcluster_camparee_prereqs_postinstall_Ubuntu1804.sh
 
-4. Launch the ParallelCluster::
+    - Additional disk space:
+        ParallelCluster defaults to 20 GiB of hard disk space. CAMPAREE requires
+        additional space to store resource files, input FASTQ files, intermediate
+        files (including parental genomes), and the final output. To increase the
+        amount of shared hard disk space when creaing a parallelc cluster, make
+        the following additions to the config file. First, append the following
+        line to the end of the ``[cluster default]`` section of the config file::
+
+            ebs_settings = default
+
+        Second, append the following lines to the end of the config file, separated
+        from the preceding section by a blank lane::
+
+            [ebs default]
+            volume_size = *Still working out recommendations based on input size*
+
+6. Launch the ParallelCluster::
 
     pcluster create camparee-cluster
 
-5. Once the cluster is full initialized, connect to the master node::
+7. Once the cluster is full initialized, connect to the master node::
 
     pcluster ssh camparee-cluster -i /path/to/AWS_key_file.pem
 
-6. Install CAMPAREE on the cluster using the instructions listed :ref:`above <running-installation>`. Note, the prerequisites were already handled by the post-install script. You can test the install using the 'Baby Genome' as described in the :ref:`quick start guide <quick-start-baby-genome>`.
+8. Install CAMPAREE on the cluster using the instructions listed :ref:`above <running-installation>`. Note, the prerequisites were already handled by the post-install script.
 
-7. Prepare CAMPAREE config file, making sure to set ``scheduler_mode:`` to 'sge'.
+9. Prepare CAMPAREE config file, making sure to set ``scheduler_mode:`` to 'sge'.
 
-8. CAMPAREE is now ready to run in **sge** mode.
+10. CAMPAREE is now ready to run in **sge** mode.
 
 When you have finished running CAMPAREE and have transferred all data off of the
 cluster, you can shut down and delete the cluster with the following command::

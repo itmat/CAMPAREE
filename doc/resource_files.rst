@@ -55,7 +55,7 @@ tab-delimited format, derived from the UCSC BED format. The annotation file
 contains eleven columns:
 
 1. chromosome/contig identifier
-    match identifiers used in :ref:`sequence <_resource-genome>` and
+    match identifiers used in :ref:`sequence <resource-genome>` and
     :ref:`ploidy <resource-ploidy>` files.
 2. strand
     Genomic strand from which the transcript is transcribed. Either "+" or "-".
@@ -150,8 +150,8 @@ files for the mouse genome with Ensembl gene models:
     cd /path/to/CAMPAREE/resources
 
     # Download files
-    wget https://itmat.data-simulators.s3.amazonaws.com/BEERS2/CAMPAREE_RESOURCE_FILES/MusMusculus_GRCm38_Ensemblv99__Resource_files.tar.gz ./
-    wget https://itmat.data-simulators.s3.amazonaws.com/BEERS2/CAMPAREE_RESOURCE_FILES/MusMusculus_GRCm38_Ensemblv99__STAR_index.tar.gz ./
+    wget http://itmat.data-simulators.s3.amazonaws.com/BEERS2/CAMPAREE_RESOURCE_FILES/MusMusculus_GRCm38_Ensemblv99__Resource_files.tar.gz ./
+    wget http://itmat.data-simulators.s3.amazonaws.com/BEERS2/CAMPAREE_RESOURCE_FILES/MusMusculus_GRCm38_Ensemblv99__STAR_index.tar.gz ./
 
     # Unpack resource files and STAR index
     tar -xvzf MusMusculus_GRCm38_Ensemblv99__Resource_files.tar.gz
@@ -164,13 +164,13 @@ Download Links for Pre-Built Resource Files
 
 MusMusculus_GRCm38_Ensemblv99 (Built 2020-03-30)
 
-- `Resource files <https://itmat.data-simulators.s3.amazonaws.com/BEERS2/CAMPAREE_RESOURCE_FILES/MusMusculus_GRCm38_Ensemblv99__Resource_files.tar.gz>`_
-- `STAR index <https://itmat.data-simulators.s3.amazonaws.com/BEERS2/CAMPAREE_RESOURCE_FILES/MusMusculus_GRCm38_Ensemblv99__STAR_index.tar.gz>`_
+- `Resource files <http://itmat.data-simulators.s3.amazonaws.com/BEERS2/CAMPAREE_RESOURCE_FILES/MusMusculus_GRCm38_Ensemblv99__Resource_files.tar.gz>`_ - md5sum: fb741d11ed12d83db8962e210b2955ca
+- `STAR index <http://itmat.data-simulators.s3.amazonaws.com/BEERS2/CAMPAREE_RESOURCE_FILES/MusMusculus_GRCm38_Ensemblv99__STAR_index.tar.gz>`_ - md5sum: cfb7e3459980c9eb340e8106af00638e
 
 HomoSapiens_GRCh38_Ensemblv99 (Built 2020-03-30)
 
-- `Resource files <https://itmat.data-simulators.s3.amazonaws.com/BEERS2/CAMPAREE_RESOURCE_FILES/HomoSapiens_GRCh38_Ensemblv99__Resource_files.tar.gz>`_
-- `STAR index <https://itmat.data-simulators.s3.amazonaws.com/BEERS2/CAMPAREE_RESOURCE_FILES/HomoSapiens_GRCh38_Ensemblv99__STAR_index.tar.gz>`_
+- `Resource files <http://itmat.data-simulators.s3.amazonaws.com/BEERS2/CAMPAREE_RESOURCE_FILES/HomoSapiens_GRCh38_Ensemblv99__Resource_files.tar.gz>`_ - md5sum: 3ea5e88c44664866501f13feaa2d6000
+- `STAR index <http://itmat.data-simulators.s3.amazonaws.com/BEERS2/CAMPAREE_RESOURCE_FILES/HomoSapiens_GRCh38_Ensemblv99__STAR_index.tar.gz>`_ - md5sum: 324c54b963d5f17a05d6c70d09b90b7d
 
 
 .. _resource-gen-custom:
