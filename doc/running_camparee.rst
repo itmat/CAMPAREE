@@ -81,9 +81,9 @@ simulated samples from a mammalian-size genome, and a cluster computing environm
 can substantially decrease run times. For users who do not have access to machines
 with enough memory or a supported cluster environment, Amazon Web Services (AWS)
 provide a viable alternative for running CAMPAREE. These instructions assume users
-have access to an AWS account with associated key pairs (i.e. \*.pem file), and
-have a passing familiarity with checking out AWS instances through the web
-interface (the AWS Management Console).
+have access to an AWS account with associated IAM key pairs, and have a passing
+familiarity with checking out AWS instances through the web interface (the AWS
+Management Console).
 
 Note: AWS is an excellent resource for providing pay-as-you-go access to high-end
 machines. However, as a cloud-based service, it is important users take approrpiate
@@ -92,8 +92,8 @@ security feature available through AWS, such as restricting access to a range of
 IP addresses, is the beyond the scope of this document. These instructions are
 meant as a starting point, and are written to be as broadly applicable as possible.
 For example, the instructions below create instances with publically accessible
-IP addresses and AWS-managed security keys. This is likely sufficient security for
-users attempting to run the simulator with published data.
+IP addresses and AWS-managed EC2 security keys. This is likely sufficient security
+for users attempting to run the simulator with published data.
 
 Here are instructions for two possible scenarios for running CAMPAREE on AWS.
 
@@ -104,7 +104,7 @@ By checking out a single, high-memory machine, users can run CAMPAREE on AWS in
 serial mode. Note, the instructions listed here for checking out an AWS instance
 rely mostly on the default settings. Users with managed AWS accounts may need
 to alter their accounts to allow them to checkout instances, and/or adapt these
- instructions to work within their accounts' restrictions.
+instructions to work within their accounts' restrictions.
 
 As RAM tends to be the bottleneck for most CAMPAREE processes, rather than the
 number of CPU cores, we recommend users select a `Memory Optimized <https://aws.amazon.com/ec2/instance-types/>`_
@@ -114,7 +114,7 @@ machine, like the r4.2xlarge (8 vCPUs; 61 GiB RAM).
    launching an AWS instance. Note, the current AWS region for your account is
    indicated at the top of the Management Console, to the left of the 'Support'
    menu. Any instances you create will launch in this region, so select a region
-   that contains both the instance type, and the security key you wish to use.
+   that contains both the instance type, and the EC2 security key you wish to use.
 
 2. Use the following configureation for the AWS instance:
 
@@ -134,8 +134,7 @@ machine, like the r4.2xlarge (8 vCPUs; 61 GiB RAM).
 
     Configure Instance Details (defaults except for the following):
         - Network: Depends on user's account.
-        - Subnet: Depends on user's account. Must be in same region as the
-          desired key pair.
+        - Subnet: Depends on user's account.
         - Auto-assign Public IP: Enable
 
     Add Storage:
@@ -148,14 +147,14 @@ machine, like the r4.2xlarge (8 vCPUs; 61 GiB RAM).
     Configure Security Group:
         Depends on user's account.
 
-    Select Key pair:
+    Select EC2 Security Key pair:
         Choose an existing key pair (will only display options from the same
         regions as the subnet selected above).
 
 2. Confirm instance details, launch, and wait for the instance to enter running state.
 
-3. Login to instance with ssh (requires the \*.pem file associated with the key
-   selected above).
+3. Login to instance with ssh (requires the \*.pem file associated with the EC2
+   security key selected above).
 
 4. Install CAMPAREE pre-requisites::
 
@@ -173,7 +172,7 @@ AWS ParallelCluster in SGE Mode
 
 The `AWS ParallelCluster <https://aws.amazon.com/hpc/parallelcluster/>`_ program
 provides a command line utility to create and manage a cluster environment entirely
-on AWS. ParalleleCluster will automatically add and remove compute nodes as they
+on AWS. ParallelCluster will automatically add and remove compute nodes as they
 are needed, and supports several job managers (including SGE). Currently, the
 account used to launch the ParallelCluster must have full admin privileges (the
 default for most unmanaged AWS accounts).
@@ -193,8 +192,8 @@ Note, these instructions were last tested using ParallelCluster version 2.6.1.
 
 4. Configure ParallelCluster by running the ``pcluster configure`` command and entering the following options
 
-    - AWS Region ID: <enter region matching desired AWS key pair>
-    - EC2 Key Pair Name: <select desired AWS key pair>
+    - AWS Region ID: <enter region matching desired EC2 key pair>
+    - EC2 Key Pair Name: <select desired EC2 key pair>
     - Scheduler: 'sge'
     - Operating System: 'ubuntu1804' (required for pre-install script used below)
     - Minimum cluster size (instances): '1'
@@ -203,9 +202,8 @@ Note, these instructions were last tested using ParallelCluster version 2.6.1.
     - Compute instance type: r4.2xlarge
     - Automate VPC creation? y
     - Network Configuration: Master in a public subnet and compute fleet in a private subnet
-    - Automate Subnet creation? y
 
-5. Edit ParalleleCluster config to add a custom startup script and request additional memory.
+5. Edit ParallelCluster config to add a custom startup script and request additional memory.
 
     Start by opening the ParallelCluster config file (generally located at
     ``~/.parallelcluster/config``) with a text editor.
@@ -222,7 +220,7 @@ Note, these instructions were last tested using ParallelCluster version 2.6.1.
         ParallelCluster defaults to 20 GiB of hard disk space. CAMPAREE requires
         additional space to store resource files, input FASTQ files, intermediate
         files (including parental genomes), and the final output. To increase the
-        amount of shared hard disk space when creaing a parallelc cluster, make
+        amount of shared hard disk space when creating a parallel cluster, make
         the following additions to the config file. First, append the following
         line to the end of the ``[cluster default]`` section of the config file::
 

@@ -58,7 +58,7 @@ Create STAR index for alignment to the baby genome::
     bin/create_star_index_for_baby_genome.sh
 
 Perform Test Run
-----------------
+^^^^^^^^^^^^^^^^
 
 We are now ready to run CAMPAREE on a two small sample fastq files aligning to
 the baby genome. If you have not already done so for installation, activate the
@@ -85,7 +85,7 @@ For SGE clusters run::
     bin/run_camparee.py -c config/baby.config.yaml -r 1 -m sge
 
 Check Results
--------------
+^^^^^^^^^^^^^
 
 When the run completes, all output will be saved to
 ``CAMPAREE/test_data/results/run_1/``. The final outputs will be in the text
