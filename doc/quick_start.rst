@@ -3,10 +3,10 @@
 Quick Start Guide
 =================
 
-This guide will walk you through basic installation and usage of CAMPAREE
+This guide will walk you through basic installation and usage of CAMPAREE, by
 running a simulation on a simplified dataset consisting of a mouse genome
-truncated to about 6 million bases (the "Baby Genome") and two samples of reads
-that align there.
+truncated to about 6 million bases and two samples of reads that align there.
+You can find more detailed installation instructions :ref:`here <installing-general>`.
 
 Installation
 ------------
@@ -15,6 +15,7 @@ Make sure you have the following installed on your system:
 
 - git
 - python version 3.6
+- pip
 - Java 1.8
 
 Pull the git repo for CAMPAREE and BEERS_UTILS the into a convenient location::
@@ -22,10 +23,14 @@ Pull the git repo for CAMPAREE and BEERS_UTILS the into a convenient location::
     git clone https://github.com/itmat/CAMPAREE.git
     git clone https://github.com/itmat/BEERS_UTILS.git
 
-Create a Python virtual environment to install required Python libraries to::
+Create a Python virtual environment to install required Python libraries. Note,
+if this command fails because your system doesn't recognize the ``python3``
+command, you might need to run it with ``python`` instead::
 
     cd CAMPAREE
     python3 -m venv ./venv_camparee
+
+Note, on your system Python 3 might be accessed using the 'python'
 
 And activate the environment::
 
@@ -38,11 +43,11 @@ Install required libraries::
 
 Install CAMPAREE package in your Python environment::
 
-    pip install .
+    pip install -e .
 
 Next, install the BEERS_UTILS package that CAMPAREE uses::
 
-    pip install ../BEERS_UTILS
+    pip install -e ../BEERS_UTILS
 
 
 .. _quick-start-baby-genome:

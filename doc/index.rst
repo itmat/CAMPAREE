@@ -5,10 +5,11 @@ User Guide
 ----------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    introduction
    quick_start
+   installing_camparee
    running_camparee
    resource_files
 
