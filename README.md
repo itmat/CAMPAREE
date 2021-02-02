@@ -26,8 +26,8 @@ Make sure you have the following installed on your system:
 
 Pull the git repo for CAMPAREE and BEERS_UTILS the into a convenient location:
 
-    git clone git@github.com:itmat/CAMPAREE.git
-    git clone git@github.com:itmat/BEERS_UTILS.git
+    git clone https://github.com/itmat/CAMPAREE.git
+    git clone https://github.com/itmat/BEERS_UTILS.git
 
 Create a Python virtual environment to install required Python libraries to:
 

@@ -20,13 +20,13 @@
 # -- Project information -----------------------------------------------------
 
 project = 'CAMPAREE'
-copyright = '2019, Greg Grant, Nick Lahens, Soumyashant Nayak, Dimitra Sarantopoulou, Thomas Brooks, Cris Lawrence'
-author = 'Greg Grant, Nick Lahens, Soumyashant Nayak, Dimitra Sarantopoulou, Thomas Brooks, Cris Lawrence'
+copyright = '2019, Greg Grant, Nick Lahens, Soumyashant Nayak, Dimitra Sarantopoulou, Thomas Brooks, Cris Lawrence, Antonijo Mrčela'
+author = 'Greg Grant, Nick Lahens, Soumyashant Nayak, Dimitra Sarantopoulou, Thomas Brooks, Cris Lawrence, Antonijo Mrčela'
 
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '2.0'
+release = '0.1.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -132,8 +132,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'BEERS20.tex', 'CAMPAREE Documentation',
-     'Greg Grant, Nick Lahens, Soumyashant Nayak, Dimitra Sarantopoulou, Thomas Brooks, Cris Lawrence', 'manual'),
+    (master_doc, 'CAMPAREE.tex', 'CAMPAREE Documentation',
+     'Greg Grant, Nick Lahens, Soumyashant Nayak, Dimitra Sarantopoulou, Thomas Brooks, Cris Lawrence, Antonijo Mrčela', 'manual'),
 ]
 
 
@@ -142,7 +142,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'beers20', 'CAMPAREE Documentation',
+    (master_doc, 'camparee', 'CAMPAREE Documentation',
      [author], 1)
 ]
 
@@ -153,8 +153,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'BEERS20', 'CAMPAREE Documentation',
-     author, 'BEERS20', 'One line description of project.',
+    (master_doc, 'CAMPAREE', 'CAMPAREE Documentation',
+     author, 'CAMPAREE', 'One line description of project.',
      'Miscellaneous'),
 ]
 
