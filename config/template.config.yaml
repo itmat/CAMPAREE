@@ -1,4 +1,4 @@
-# Configuration File for CAMPAREE (v0.1.0)
+# Configuration File for CAMPAREE (v0.2.0)
 # See baby.config.yaml for an example of a fully specified config file.
 # Everything listed below is required, except for those labeled [OPTIONAL].
 # To remove optional arguments, they can be commented out by placing a "#"
@@ -48,32 +48,36 @@ resources:
 
     # Alpha-numeric (including underscores and periods) name of organism and
     # genome/annotation version. Used as sub-directory to the resources path.
-    species_model: Species_musculus.GRCm38
+    species_model: MusMusculus_GRCm38_Ensemblv99
 
     # Sub-directory name containing STAR index files This index must be built
     # using a version of STAR compatible with v2.5.2a. Also, the chromosome
     # names used in the index must match those used by the reference FASTA and
     # annotation files below.
-    star_genome_index_directory_name: genome
+    star_genome_index_directory_name: star_index.genome
 
     # FASTA file containing complete genome sequence. Each chromosome sequence
     # must be on a single line. To generate files in this format from multi-line
-    # FASTA files, use the camparee/BLAHBLAH.py utility script. If ends in ".gz",
-    # will be treated as a gzipped file.
-    reference_genome_filename: Mus_musculus.GRCm38.dna.oneline_seqs.fa
+    # FASTA files, use the bin/format_reference_files_for_camparee.py utility
+    # script. If ends in ".gz", will be treated as a gzipped file.
+    reference_genome_filename: MusMusculus_GRCm38_Ensemblv99.oneline_seqs.fa
 
     # File containing coordinates for each transcript in the annotation. This
-    # file can be built from a GTF using the BLABLAH2.py script. Chromosome
-    # names in this file must match those used in the reference genome FASTA.
-    annotation_filename: Mus_musculus.GRCm38.93.annotation.txt
+    # file can be built from a GTF using the bin/format_reference_files_for_camparee.py
+    # script. Chromosome names in this file must match those used in the reference
+    # genome FASTA.
+    annotation_filename: MusMusculus_GRCm38_Ensemblv99.annotation.txt
 
     # File containing a list of chromosome names and the number of homologous
     # copies for each gender in the species. Chromosome names must match those
     # in the reference genome FASTA and annotational files, but may be a subset.
     # Only the chromosomes specified in this file are used to generate
     # simulated transcripts. See www.smartURLdescribingEverything.com/ploidy
-    # for full details on how to create ploidy file, and how it is used.
-    chr_ploidy_filename: Mus_musculus.GRCm38.chr_ploidy.txt
+    # for full details on how to create ploidy file, and how it is used. The
+    # bin/format_reference_files_for_camparee.py script also has the option to
+    # create a started ploidu file that will need to be edited to account for
+    # non-diploid organisms and non-autosomal chromosomes.
+    chr_ploidy_filename: MusMusculus_GRCm38_Ensemblv99.chr_ploidy.txt
 
 ### Information concerning input samples
 input:
@@ -134,8 +138,15 @@ input:
 output:
     # Path to upper-level directory in which all CAMPAREE output will be saved.
     directory_path: /path/to/output/directory/
-    # This is likely to be removed or changed drastically.
-    type: molecule_file
+    # The format of the CAMPAREE molecule output. Should be either 'file' or
+    # 'packet'.
+    # file: creates a raw text file of the molecules, their source locations on
+    #       the parental and reference genomes, and the CIGAR strings mapping the
+    #       molecules on the parental and reference genomes.
+    # packet: A binay file of molecule information suitable for use by the BEERS2
+    #         simulator. This file is currently pickled, but this is likely to
+    #         change.
+    type: file
     # Simulate the default number of RNA transcript molecules for all samples
     # and ignore the sample-specific molecule counts.
     override_sample_molecule_count: False
@@ -198,6 +209,10 @@ steps:
          parameters:
              sort_by_entropy: false
              min_threshold: 0.03
+         # [OPTIONAL] The VariantsFinderStep step can be memory intensive for
+         # mammalian-sized genomes, requiring additional RAM.
+         scheduler_parameters:
+             memory_in_mb: 12000
     # Merge variants identified in each sample into a single VCF file. This step
     # is skipped for samples where 'pooled' is set to 'True'.
     'variants_compilation.VariantsCompilationStep':
@@ -205,6 +220,12 @@ steps:
     # this step requires at least two input samples to perform phasing. This step
     # is skipped for samples where 'pooled' is set to 'True'.
     'beagle.BeagleStep':
+        parameters:
+            # Force Beagle to run with a single thread (by default it uses the
+            # system's settings to determine the number of threads). This avoids
+            # memory allocation errors arising from conflicts with glibc, java,
+            # and multiple threads on some SGE systems.
+            nthreads: 1
     # Build parental genome sequences based on the variants identified from the
     # input samples. This step is skipped for samples where 'pooled' is set to
     # 'True'.
@@ -223,25 +244,52 @@ steps:
     # Update transcript annotation coordinates to reflect changes made when
     # constructring each parental genome sequence.
     'update_annotation_for_genome.UpdateAnnotationForGenomeStep':
-    # Use kalliston to quantify transcript- and gene-level read counts from the
-    # input data. Use bowtie2 to align input data to the transcriptome and
-    # quantify allele-specific read counts. Use these quantification results,
-    # in addition to the intron-quantification to generate backgroung
-    # distributions for each transcript in the simulated sample. Lastly, generate
-    # the specified number of simulated molecules using all of these distributions.
-    'transcriptomes.TranscriptQuantificatAndMoleculeGenerationStep':
+    # Prepare transcriptome sequence given a parental genome sequence and the
+    # associated annotation.
+    'transcriptome_fasta_preparation.TranscriptomeFastaPreparationStep':
+    # Build kallisto (v0.45.0) transcriptome index from a transcriptome sequence.
+    'kallisto.KallistoIndexStep':
+    # Use kallisto (v0.45.0) to generate transcript-level quantification for the
+    # parental transcriptome from the input FASTQ files.
+    'kallisto.KallistoQuantStep':
+    # Build Bowtie2 (v2.3.4.3) transcriptome index from a transcriptome sequence.
+    'bowtie2.Bowtie2IndexStep':
         parameters:
-            # Number of CPU threads to use when running bowtie2 for transcriptome
-            # alignments. This value should match the number of processors the
-            # scheduler requests when submitting the transcripomes job.
+            # [OPTIONAL] Number of CPU threads to use when running bowtie2 to
+            # build transcriptome indexes. This value should match the number of
+            # processors requested in the scheduler parameters below. [DEFAULT: 1]
             num_bowtie_threads: 7
-        # [OPTIONAL] This step performs several memory-intensive operations while
-        # determining the allele-specific expression of each read and tends to
-        # require additional RAM and processor resources. The baby genome is
-        # relatively small and does not need to override the default schduler
-        # parameters. These entries are kept here as an example.
+        # [OPTIONAL] The bowtie2 steps can be memory intensive and tend to
+        # require additional RAM and processor resources.
         scheduler_parameters:
-            # This value should match the number given the the 'num_bowtie_threads'
+            # This value should match the number given to the 'num_bowtie_threads'
             # parameter above.
             num_processors: 7
             memory_in_mb: 40000
+    # Align FASTQ files to a parental transcriptome using Bowtie2 (v2.3.4.3).
+    'bowtie2.Bowtie2AlignStep':
+        parameters:
+            # [OPTIONAL] Number of CPU threads to use when running bowtie2
+            # transcriptome alignments. This value should match the number of
+            # processors requested in the scheduler parameters below. [DEFAULT: 1]
+            num_bowtie_threads: 7
+        # [OPTIONAL] The bowtie2 steps can be memory intensive and tend to
+        # require additional RAM and processor resources.
+        scheduler_parameters:
+            # This value should match the number given to the 'num_bowtie_threads'
+            # parameter above.
+            num_processors: 7
+            memory_in_mb: 40000
+    # Generate gene, transcript, and PSI value distributions from the kallisto
+    # quantification results of both parental genomes/transcriptomes.
+    'transcript_gene_quant.TranscriptGeneQuantificationStep':
+    # Generate distribution of allelic imblance from the Bowtie2 transcriptome
+    # alignments to both parental genomes/transcriptomes. This step also uses
+    # the reference genome alignments generated by the GenomeAlignmentStep, or
+    # provided by the user.
+    'allelic_imbalance_quant.AllelicImbalanceQuantificationStep':
+        # [OPTIONAL] The AllelicImbalanceQuantificationStep step can be memory
+        # intensive for samples with a high number of aligned reads, requiring
+        # additional RAM.
+        scheduler_parameters:
+            memory_in_mb: 56000

@@ -1,5 +1,4 @@
 import re
-from io import StringIO
 import os
 import gzip
 import itertools
@@ -14,35 +13,63 @@ class CampareeUtils:
     annot_output_format = '{chrom}\t{strand}\t{txStart}\t{txEnd}\t{exonCount}\t{exonStarts}\t{exonEnds}\t{transcriptID}\t{geneID}\t{geneSymbol}\t{biotype}\n'
 
     @staticmethod
-    def edit_reference_genome(reference_genome_file_path, edited_reference_genome_file_path):
+    def create_oneline_seq_fasta(input_fasta_file_path, output_oneline_fasta_file_path):
+        """Helper method to convert a FASTA file containing line breaks embedded
+        within its sequences to a FASTA file containing each sequence on a single
+        line.
+
+        Parameters
+        ----------
+        input_fasta_file_path : string
+            Path to input FASTA file with multi-line sequence data.
+        output_oneline_fasta_file_path : string
+            Path to output FASTA file to create, where single line sequences
+            will be stored.
+
+        Returns
+        -------
+        set
+            Set of unique chromosome/contig names contained in input FASTA file.
+
         """
-        Helper method to convert a reference genome file containing line breaks embedded within its
-        sequences to a reference genome file containing each seqeuence on a single line.
-        :param reference_genome_file_path: Path to reference geneome file having multi-line sequence data
-        :param edited_reference_genome_file_path: Path to reference genome file to create with single line sequence
-        data.
-        """
-        reference_genome = dict()
-        fasta_chromosome_pattern = re.compile(">([^\s]*).*")
-        chromosome, sequence = '', None
+        # Use set to track unique chromosomes/contigs since it automatically
+        # handles duplicate removal.
+        chromosomes = set()
+
+        # Build regex to recognize FASTA header line and store chromosome/contig
+        # name (i.e. sequence identifier) in the first group. Chromosome/contig
+        # name defined as all non-space characters between ">" and the first
+        # whitespace character.
+        fasta_header_pattern = re.compile(r'>([^\s]*).*')
+
+        # Flag to denote when a FASTA sequence (and not a header) is being
+        # processed.
         building_sequence = False
-        with open(reference_genome_file_path, 'r') as reference_genome_file:
-            for line in reference_genome_file:
+
+        # Input FASTA lines saved directly to output file as they are processed
+        # to minimize the amount of data stored in memory at a given time.
+        with CampareeUtils.open_file(input_fasta_file_path, 'r') as input_fasta_file, \
+             CampareeUtils.open_file(output_oneline_fasta_file_path, 'w') as output_fasta_file:
+
+            for line in input_fasta_file:
                 if line.startswith(">"):
                     if building_sequence:
-                        reference_genome[chromosome] = sequence.getvalue()
-                        sequence.close()
-                    chromosome_match = re.match(fasta_chromosome_pattern, line)
-                    chromosome = chromosome_match.group(1)
+                        # Add newline at the end of previous sequence
+                        output_fasta_file.write('\n')
+                        building_sequence = False
+
+                    sequence_id = re.match(fasta_header_pattern, line).group(1)
+                    output_fasta_file.write('>' + sequence_id + '\n')
+                    chromosomes.add(sequence_id)
+
+                else:
+                    output_fasta_file.write(line.rstrip('\n').upper())
                     building_sequence = True
-                    sequence = StringIO()
-                    continue
-                elif building_sequence:
-                    sequence.write(line.rstrip('\n').upper())
-        with open(edited_reference_genome_file_path, 'w') as edited_reference_genome_file:
-            for chr, seq in reference_genome.items():
-                edited_reference_genome_file.write(f">{chr}\n")
-                edited_reference_genome_file.write(f"{seq}\n")
+
+            # Add line break to end of output oneline fasta file.
+            output_fasta_file.write("\n")
+
+        return chromosomes
 
     @staticmethod
     def create_genome(genome_file_path):
@@ -122,7 +149,7 @@ class CampareeUtils:
         return chromosome, position, variants
 
     @staticmethod
-    def convert_gtf_to_annot_file_format(gtf_filename):
+    def convert_gtf_to_annot_file_format(input_gtf_filename, output_annot_filename):
         """Convert a GTF file to a tab-delimited annotation file with one line
         per transcript. Each line in the annotation file will have the following
         columns:
@@ -151,21 +178,24 @@ class CampareeUtils:
 
         Parameters
         ----------
-        gtf_filename : string
+        input_gtf_filename : string
             Path to GTF file to be converted annotation file format.
+        output_annot_filename : string
+            Path to output file in annotation format.
 
         Returns
         -------
-        string
-            Name of the annotation file produced from the GTF file.
+        set
+            Set of unique chromosome/contig names contained in input GTF file.
+            Only GTF entries of "exon" feature type contribute to this set.
 
         """
-        #Note, as-is this statement won't expand "~" in the path to point to
-        #home directory.
-        output_annot_filename = os.path.splitext(gtf_filename)[0] + ".annotation.txt"
+        # Use set to track unique chromosomes/contigs since it automatically
+        # handles duplicate removal.
+        chromosomes = set()
 
-        with open(gtf_filename, 'r') as gtf_file, \
-                open(output_annot_filename, 'w') as output_annot_file:
+        with CampareeUtils.open_file(input_gtf_filename, 'r') as gtf_file, \
+                CampareeUtils.open_file(output_annot_filename, 'w') as output_annot_file:
 
             #Print annot file header (note the '#' prefix)
             output_annot_file.write("#" + CampareeUtils.annot_output_format.replace('{', '').replace('}', ''))
@@ -204,7 +234,8 @@ class CampareeUtils:
                     break
 
             if not exon_found:
-                raise CampareeUtilsException('ERROR: {gtf_file} contains no lines with exon feature_type.\n'.format(gtf_file=gtf_filename))
+                raise CampareeUtilsException(f"ERROR: {input_gtf_filename} contains "
+                                             f"no lines with exon feature_type.\n")
 
             #Prime variables with data from first exon
             chrom = line_data[0]
@@ -217,6 +248,7 @@ class CampareeUtils:
                 genesymbol = genesymbol_pattern.search(line_data[8]).group(1)
             if biotype_pattern.search(line_data[8]):
                 biotype = biotype_pattern.search(line_data[8]).group(1)
+            chromosomes.add(chrom)
 
             #process the remainder of the GTF file
             for line in gtf_file:
@@ -267,6 +299,7 @@ class CampareeUtils:
                             biotype = biotype_pattern.search(line_data[8]).group(1)
                         else:
                             biotype = "None"
+                        chromosomes.add(chrom)
 
                     #This exon is strill from the same transcript.
                     else:
@@ -298,8 +331,49 @@ class CampareeUtils:
                 )
             )
 
-        return output_annot_filename
+        return chromosomes
 
+    @staticmethod
+    def open_file(filename, mode='r'):
+        """Helper method which can open gzipped files by checking the filename
+        for the '.gz' extension. If no '.gz' extension found, this method uses
+        the standard open() function.
+
+        Parameters
+        ----------
+        filename : string
+            Name of the file to open. If this filename has a '.gz' extension,
+            the function uses the gzip package. If not, it uses open() function.
+        mode : string
+            Access mode (e.g. 'r' - read, 'w' - write) passed to the open function.
+            Note, to open a file in binary mode, need to explicitly end the mode
+            code with a 'b'. [DEFAULT: 'r' - open file for reading in text mode].
+
+        Returns
+        -------
+        file object
+            Pointer to the opened file.
+
+        """
+        file_pointer = None
+
+        # gzip.open defaults to opening files in binary modes and requires
+        # explicit inclusion of 't' in the mode to open it as text. However,
+        # the built-in open() function defaults to text mode. To normalize the
+        # behavior between these two methods to match the built-in open(), the
+        # code here checks for the presence of a 'b' (for binary mode). If
+        # there's no 'b' or 't', the code appends a 't', so the mode will
+        # always default to text mode.
+        updated_mode = mode
+        if 'b' not in updated_mode.lower() and 't' not in updated_mode.lower():
+            updated_mode = updated_mode + 't'
+
+        if filename.endswith('.gz'):
+            file_pointer = gzip.open(filename=filename, mode=updated_mode)
+        else:
+            file_pointer = open(file=filename, mode=updated_mode)
+
+        return file_pointer
 
 class CampareeException(Exception):
     """Base class for other Camparee exceptions."""

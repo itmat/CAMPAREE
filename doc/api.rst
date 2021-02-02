@@ -1,108 +1,122 @@
-The Controller Module
----------------------
+CAMPAREE API
+============
+
+The CAMPAREE Controller
+-----------------------
 
 .. automodule:: camparee.camparee_controller
     :members:
 
-Abstract Camparee Step
---------------------------------
-
-.. automodule:: camparee.abstract_camparee_step
-    :members:
-
-Camparee Step Provider
---------------------------------
-
-.. automodule:: camparee.camparee_step_provider
-    :members:
-
-The Expression Pipeline
------------------------
+Expression Simulation Pipeline
+------------------------------
 
 .. automodule:: camparee.expression_pipeline
     :members:
 
-Genome Alignment
-----------------
+Genome Alignment & BAM Indexing Steps
+-------------------------------------
 
 .. automodule:: camparee.genome_alignment
     :members:
 
-Indexing
---------
-
-.. automodule:: camparee.run_pysam_index
-    :members:
-
-Variants Finding
-----------------
+Variant Finder Step
+-------------------
 
 .. automodule:: camparee.variants_finder
     :members:
 
-Intron Quantification
----------------------
+Intron Quantification Step
+--------------------------
 
 .. automodule:: camparee.intron_quant
     :members:
 
-Variants Compilation
---------------------
+Variant Compilation Step
+------------------------
 
 .. automodule:: camparee.variants_compilation
     :members:
 
-Gene Files Preparation
-----------------------
-
-.. automodule:: camparee.gene_files_preparation
-    :members:
-
-Beagle
-------
+Beagle Step
+-----------
 
 .. automodule:: camparee.beagle
     :members:
 
-Genome Builder
---------------
+Genome Builder Step
+-------------------
 
 .. automodule:: camparee.genome_builder
     :members:
 
-Annotation Updater
-------------------
+Update Annotation Step
+----------------------
 
 .. automodule:: camparee.update_annotation_for_genome
     :members:
 
-Annotation Info
-------------------
+Transcriptome FASTA Preparation Step
+------------------------------------
 
-.. automodule:: camparee.annotation_info
+.. automodule:: camparee.transcriptome_fasta_preparation
     :members:
 
+Kallisto Index Generation & Quantification Steps
+------------------------------------------------
 
-Transcriptome Preparation
--------------------------
-
-.. automodule:: camparee.transcriptomes
+.. automodule:: camparee.kallisto
     :members:
 
-Allelic Imbalance Quantification
---------------------------------
+Bowtie2 Index Generation & Alignment Steps
+------------------------------------------
+
+.. automodule:: camparee.bowtie2
+    :members:
+
+Transcript Quantification Step
+------------------------------
+
+.. automodule:: camparee.transcript_gene_quant
+    :members:
+
+Allelic Imbalance Quantification Step
+-------------------------------------
 
 .. automodule:: camparee.allelic_imbalance_quant
     :members:
 
-Molecule Maker
---------------------------------
+Molecule Maker Step
+-------------------
 
 .. automodule:: camparee.molecule_maker
     :members:
 
-Camparee Utils
---------------------------------
+Annotation Info
+---------------
+
+.. automodule:: camparee.annotation_info
+    :members:
+
+CAMPAREE Utils
+--------------
 
 .. automodule:: camparee.camparee_utils
+    :members:
+
+Abstract CAMPAREE Step
+----------------------
+
+.. automodule:: camparee.abstract_camparee_step
+    :members:
+
+CAMPAREE Step Provider
+----------------------
+
+.. automodule:: camparee.camparee_step_provider
+    :members:
+
+CAMPAREE Constants
+------------------
+
+.. automodule:: camparee.camparee_constants
     :members:
