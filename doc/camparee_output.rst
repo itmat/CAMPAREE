@@ -1,4 +1,4 @@
-.._camparee_output:
+.. _camparee_output:
 
 CAMPAREE Output
 ===============
