@@ -12,6 +12,7 @@ User Guide
    installing_camparee
    running_camparee
    resource_files
+   camparee_output
 
 The API Reference
 -----------------
