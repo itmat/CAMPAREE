@@ -200,7 +200,7 @@ class FormatReferenceFilesForCamparee():
                                                      ' have ".gz" extensions.')
         parser.add_argument('-n', '--species_model_name', required=True,
                             help="Name of the species and genome build of the input files. "
-                                 "Used to name output directory and files, so it must be "
+                                 "Used to name output directory and files, so it must "
                                  "comply with file naming conventions.")
         parser.add_argument('-o', '--output_directory_path', required=False, default="",
                             help="Path to output the formatted files. If not specified, "
