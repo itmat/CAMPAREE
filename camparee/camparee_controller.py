@@ -217,7 +217,9 @@ class CampareeController:
         fastq_input_directory_path = self.configuration["input"]["fastq_directory_path"]
 
         # BAM directory path and BAM files are optional
-        bam_directory_path = self.configuration["input"].get("bam_directory_path", None)
+        bam_directory_path = None
+        if self.configuration["input"]["optional_inputs"] is not None:
+            bam_directory_path = self.configuration["input"]["optional_inputs"].get("bam_directory_path", None)
 
         # Samples must be housed under the data mapping
         if "data" not in self.configuration["input"]:
@@ -303,7 +305,10 @@ class CampareeController:
         """
         fastq_directory_path = self.configuration["input"]["fastq_directory_path"]
         # BAM directory path and BAM files are optional
-        bam_directory_path = self.configuration['input'].get('bam_directory_path', None)
+        bam_directory_path = None
+        if self.configuration["input"]["optional_inputs"] is not None:
+            bam_directory_path = self.configuration["input"]["optional_inputs"].get("bam_directory_path", None)
+
         self.input_samples = []
         # TODO handle the situation where the adapter kit is not specified or not found
         # The kit is really only needed for library prep.  So if the expression pipeline does not generate
@@ -313,7 +318,7 @@ class CampareeController:
             #sample_name = os.path.splitext(input_sample["filenames"][0])[0]
             fastq_file_paths = [os.path.join(fastq_directory_path, filename)
                                        for filename in input_sample["fastq_files"]]
-            bam_file_path = os.path.join(bam_directory_path, input_sample["bam_file"]) if "bam_file" in input_sample else ''
+            bam_file_path = os.path.join(bam_directory_path, input_sample["optional_inputs"]["bam_file"]) if "bam_file" in input_sample["optional_inputs"] else ''
             gender = input_sample.get("gender", None)
             pooled = input_sample["pooled"]
             molecule_count = input_sample.get("molecule_count", None)
