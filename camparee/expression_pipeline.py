@@ -34,6 +34,7 @@ class ExpressionPipeline:
         self.log_directory_path = log_directory_path
         self.create_intermediate_data_subdirectories(data_directory_path, log_directory_path)
         self.log_file_path = os.path.join(log_directory_path, "expression_pipeline.log")
+        self.optional_inputs = {}
         self.steps = {}
         #Track pathes of scripts for each step. This is needed when running the
         #steps from the command line, as we do when submitting to lsf.
@@ -57,6 +58,11 @@ class ExpressionPipeline:
         # Validate output data and set
         if not self.validate_and_set_output_data(configuration['output']):
             raise CampareeValidationException("The output data is not completely valid.  "
+                                              "Consult the standard error file for details.")
+
+        # Validate and instantiate optional input files
+        if not self.validate_and_set_optional_inputs(configuration['input']['optional_inputs']):
+            raise CampareeValidationException("There was a problem with the optional inputs. "
                                               "Consult the standard error file for details.")
 
         # Load default scheduler parameters (if provided)
@@ -159,6 +165,45 @@ class ExpressionPipeline:
             valid = False
 
         return valid
+
+    def validate_and_set_optional_inputs(self, optional_inputs):
+        """Helper method to validate and set optional inputs.
+
+        Parameters
+        ----------
+        optional_inputs : dict
+            Optional input files specified in the config file.
+
+        Returns
+        -------
+        boolean
+            True for valid optional inputs and False otherwise.
+
+        """
+
+        valid = True
+
+        # Initialize list of all optional inputs
+        self.optional_inputs['phased_vcf_file'] = None
+
+        # If user hasn't specified any optional inputs, skip all validation steps.
+        # This prevents errors when trying to access different elements of
+        # optional_inputs.
+        if optional_inputs is None:
+            return valid
+
+        # Check for presence of phased VCF file and validate existence.
+        self.optional_inputs['phased_vcf_file'] = optional_inputs.get('phased_vcf_file', None)
+        if self.optional_inputs['phased_vcf_file'] is not None:
+            if not os.path.exists(self.optional_inputs['phased_vcf_file']) or \
+               not os.path.isfile(self.optional_inputs['phased_vcf_file']):
+                print(f"The phased vsf file specified under the optional inputs,"
+                      f" {self.optional_inputs['phased_vcf_file']}, does not exist.",
+                      file=sys.stderr)
+                valid = False
+
+        return valid
+
 
     def set_third_party_software(self):
         """
@@ -330,12 +375,15 @@ class ExpressionPipeline:
                                      self.reference_genome_file_path, seed],
                       dependency_list=[f"VariantsFinderStep.{sample.sample_id}" for sample in self.samples])
 
-        seed = seeds["BeagleStep"]
-        self.run_step(step_name='BeagleStep',
-                      sample=None,
-                      execute_args=[self.beagle_file_path, seed],
-                      cmd_line_args=[self.beagle_file_path, seed],
-                      dependency_list=[f"VariantsCompilationStep"])
+        phased_vcf_file = self.optional_inputs['phased_vcf_file']
+        # If user did not provide phased vcf file
+        if phased_vcf_file is None:
+            seed = seeds["BeagleStep"]
+            self.run_step(step_name='BeagleStep',
+                          sample=None,
+                          execute_args=[self.beagle_file_path, seed],
+                          cmd_line_args=[self.beagle_file_path, seed],
+                          dependency_list=[f"VariantsCompilationStep"])
 
         #TODO: We could load all of the steps in the entire pipeline into the queue
         #      and then just have the queue keep running until everything finishes.
@@ -344,13 +392,19 @@ class ExpressionPipeline:
         self.expression_pipeline_monitor.monitor_until_all_jobs_completed(queue_update_interval=10)
 
         for sample in self.samples:
-            print(f"Processing sample{sample.sample_id} ({sample.sample_name}...")
+            print(f"Processing sample{sample.sample_id} ({sample.sample_name})...")
+            dep_list = None
+            if phased_vcf_file is None:
+                phased_vcf_file = os.path.join(self.data_directory_path,
+                                                          CAMPAREE_CONSTANTS.BEAGLE_OUTPUT_FILENAME)
+                dep_list = [f"BeagleStep"]
             self.run_step(step_name='GenomeBuilderStep',
                           sample=sample,
-                          execute_args=[sample, self.chr_ploidy_data, self.reference_genome],
-                          cmd_line_args=[sample, self.chr_ploidy_file_path,
+                          execute_args=[sample, phased_vcf_file, self.chr_ploidy_data,
+                                        self.reference_genome],
+                          cmd_line_args=[sample, phased_vcf_file, self.chr_ploidy_file_path,
                                          self.reference_genome_file_path],
-                          dependency_list=[f"BeagleStep"])
+                          dependency_list=dep_list)
 
             for suffix in [1, 2]:
                 self.run_step(step_name='UpdateAnnotationForGenomeStep',

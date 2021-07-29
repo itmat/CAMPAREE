@@ -110,6 +110,14 @@ input:
         # the resulting BAM files are saved to the output directory (specified
         # below).
         #bam_directory_path:
+        # [OPTIONAL] VCF file containing phased genotypes for each sample. The
+        # sample genotype columns must use the same names as the samples they
+        # correspond to (e.g. sample1, sample2, etc.). The format of this input
+        # file is not currently checked to make sure it matches beagle output
+        # exactly. We plan to add checks of the VCF file's format in future
+        # releases of CAMPAREE. Lastly, the VCF file will be treated as
+        # gzipped if its name ends with '.gz'.
+        #phased_vcf_file:
 
     ### Per-sample information (input files, attributes)
     data:

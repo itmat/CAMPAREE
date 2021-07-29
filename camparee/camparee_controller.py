@@ -318,7 +318,9 @@ class CampareeController:
             #sample_name = os.path.splitext(input_sample["filenames"][0])[0]
             fastq_file_paths = [os.path.join(fastq_directory_path, filename)
                                        for filename in input_sample["fastq_files"]]
-            bam_file_path = os.path.join(bam_directory_path, input_sample["optional_inputs"]["bam_file"]) if "bam_file" in input_sample["optional_inputs"] else ''
+            bam_file_path = ''
+            if input_sample["optional_inputs"] is not None and "bam_file" in input_sample["optional_inputs"]:
+                bam_file_path = os.path.join(bam_directory_path, input_sample["optional_inputs"]["bam_file"])
             gender = input_sample.get("gender", None)
             pooled = input_sample["pooled"]
             molecule_count = input_sample.get("molecule_count", None)
