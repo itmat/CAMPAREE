@@ -86,7 +86,7 @@ separately for each parental allele.
 3. To run Polyester, take note of the files generated in the previous step, and
    run the following R code (interactively or as a script):
 
-    .. code-block:: R
+     .. code-block:: R
 
         library(polyester)
         count_mat = read.table("path/to/CAMPAREE.count_table.txt", header = TRUE)
@@ -255,7 +255,7 @@ perform separate BEERS runs for transcripts from each parental allele.
     expression all transcripts in the BEERS annotation. Prepare this from the
     CAMPAREE count matrix by running the following code in R:
 
-    .. code-block:: R
+     .. code-block:: R
 
         library(readr)
         library(dplyr)
@@ -333,3 +333,166 @@ perform separate BEERS runs for transcripts from each parental allele.
 
 RSEM
 ^^^^
+
+RSEM can be used to both analyze and simulate allele-specific data, if
+configured with an allele-specific index. However, it is simpler to
+
+To run the RSEM simulator with CAMPAREE output, users can follow a similar
+procedure as Polyester. That is, users generate simulated data from both
+parental alleles with the FASTA file of CAMPAREE transcript sequences and the
+table of transcript counts (produced by the *molecule_file_to_fasta_and_count_table.py*
+script). Additionally, RSEM needs
+
+1. Activate CAMPAREE environment by running the following command from the
+   CAMPAREE directory::
+
+     source ./venv_camparee/bin/activate
+
+2. Run *molecule_file_to_fasta_and_count_table.py* script to generate a single
+   FASTA file and count table containing data from both parental alleles::
+
+     python path/to/CAMPAREE/bin/molecule_file_to_fasta_and_count_table.py \
+         -i path/to/CAMPAREE/molecule_file.txt \
+         -o path/to/output/dir/ \
+         -p "Output_Prefix." \
+         -t
+
+3. Create an RSEM index from the FASTA file of parental transcript sequences.
+   This step requires the user to provide an aligner. Since RSEM supports
+   Bowtie2, the command here points RSEM to the Bowtie2 executable packaged in
+   the CAMPAREE installation directory::
+
+     rsem-prepare-reference \
+         --bowtie2 \
+         --bowtie2-path path/to/CAMPAREE/third_party_software/bowtie2-2.3.4.3-linux-x86_64 \
+         path/to/CAMPAREE.transcriptome.fa \
+         path/to/rsem/index/directory/camparee_output.transcriptome
+
+4. When RSEM simulates data, it requires various models of sequencing biases
+   (e.g. error profiles, fragment length distributions). While it is possible to
+   create the model file defining this information from scratch, it is quite
+   complex. Alternatively, it is simpler to quickly generate this model file by
+   by using RSEM to quantify some of the FASTQ files used as input for CAMPAREE.
+   This command uses the same RSEM transcriptome index created in the previous
+   step. Note, the '--paired-end' and '--strandedness reverse' options will be
+   specific to the dataset (i.e. library prep used to prepare original RNA-Seq
+   libraries)::
+
+     rsem-calculate-expression \
+         --bowtie2 \
+         --bowtie2-path path/to/CAMPAREE/third_party_software/bowtie2-2.3.4.3-linux-x86_64 \
+         --paired-end \
+         --strandedness reverse \
+         path/to/input.Forward.fastq \
+         path/to/input.Reverse.fastq \
+         path/to/rsem/index/directory/camparee_output.transcriptome \
+         path/to/rsem/output/directory/quant_from_input_fastq
+
+   The above command creates the RSEM model file we need, in the following
+   location::
+
+     path/to/rsem/output/directory/quant_from_input_fastq.stat/quant_from_input_fastq.model
+
+5. To read quantification data for simulations, RSEM requires the data be in a
+   specific format. Specifically, the data must match the same file format RESM
+   uses to output its quantification results. The following R code takes the
+   transcript count table from the CAMPAREE output and reformats it to match
+   the RESM \*.genes.results quantification file format. RSEM expects the
+   quantification values in TPM (transcripts per million), which involves a
+   normalization by transcript length. To get the length for each transcript in
+   each parental allele, users will import the *updated_annotation_\?_trimmed.txt*
+   files created by CAMPAREE for each parental genome. These are the same
+   CAMPAREE annotation files used above when running BEERS with CAMPAREE output.
+
+     .. code-block:: R
+
+        library(readr)
+        library(stringr)
+        library(dplyr)
+        library(tidyr)
+
+        count_table_file = "path/to/CAMPAREE.count_table.txt"
+        annotation_file.parent_1 = "path/to/camparee/output/updated_annotation_1_trimmed.txt"
+        annotation_file.parent_2 = "path/to/camparee/output/updated_annotation_2_trimmed.txt"
+        output_genes_results_file = "path/to/rsem/simulation/directory/CAMPAREE.genes.results"
+
+        count_table =
+        read_tsv(count_table_file, col_names = c("gene_id", "expected_count"),
+                skip = 1)
+
+        annotation_table.parent_1 =
+        read_tsv(annotation_file.parent_1,
+                col_types = cols(.default = col_character(),
+                                 txStart = col_integer(),
+                                 txEnd = col_integer(),
+                                 exonCount = col_integer())) %>%
+        mutate(gene_id = paste0(transcriptID, "_1")) %>%
+        select(gene_id, txStart, txEnd, exonCount, exonStarts, exonEnds)
+        annotation_table.parent_2 =
+        read_tsv(annotation_file.parent_2,
+                col_types = cols(.default = col_character(),
+                                 txStart = col_integer(),
+                                 txEnd = col_integer(),
+                                 exonCount = col_integer())) %>%
+        mutate(gene_id = paste0(transcriptID, "_2")) %>%
+        select(gene_id, txStart, txEnd, exonCount, exonStarts, exonEnds)
+
+        # Calculate lengths of each transcript
+        annotation_table.both_parents.w_lengths =
+        bind_rows(annotation_table.parent_1, annotation_table.parent_2) %>%
+        # Pairs of start and stop coordinates define a one-based,
+        # closed interval (i.e. [start, stop]). When subtracting
+        # each start and stop, add 1 to the result to get the true
+        # length of the interval in bp. For the pre_mRNA length,
+        # include the introns in the length calculations.
+        mutate(length.pre_mRNA = as.integer(txEnd - txStart + 1)) %>%
+        rowwise() %>%
+        mutate(ExonStarts.list = stringr::str_split(exonStarts, stringr::fixed(",")),
+              ExonEnds.list = stringr::str_split(exonEnds, stringr::fixed(",")),
+              ExonLengths = list(as.integer(ExonEnds.list) - as.integer(ExonStarts.list)),
+              length.mRNA = sum(ExonLengths) + exonCount) %>%
+        select(gene_id, length.pre_mRNA, length.mRNA) %>%
+        arrange(gene_id) %>%
+        ungroup()
+
+        # Generate and format all information to match an rsem
+        # genes.results file specifications.
+        effective_len_min = 20
+        camparee_derived_rsem_results =
+        left_join(count_table %>%
+                     mutate(gene_id.w_parent = stringr::str_remove(gene_id, "_pre_mRNA")),
+                 annotation_table.both_parents.w_lengths,
+                 by = c("gene_id.w_parent" = "gene_id")) %>%
+        mutate(length =
+                  case_when(stringr::str_detect(gene_id, "pre_mRNA") ~ length.pre_mRNA,
+                            TRUE ~ length.mRNA),
+              # Use 2x100bp (for paired-end reads) as fragment length
+              effective_length = length - 200 + 1,
+              `transcript_id(s)` = gene_id) %>%
+        arrange(gene_id) %>%
+        # Set genes with negative effective lengths to 0 to prevent
+        # divide-by-zero errors. This is the procedure RSEM performs.
+        mutate(effective_length = (effective_length > effective_len_min) * effective_length,
+              expected_count = (effective_length > effective_len_min) * expected_count,
+              Frac = expected_count / sum(expected_count),
+              FPKM = if_else(effective_length > effective_len_min,
+                             Frac * 1e9 / effective_length,
+                             0),
+              TPM = FPKM / sum(FPKM) * 1e6) %>%
+        select(gene_id, `transcript_id(s)`, length, effective_length,
+              expected_count, TPM, FPKM)
+
+        # Save the file
+        write_tsv(camparee_derived_rsem_results, output_genes_results_file)
+
+6. Now use RSEM to generate simulated reads. This operation requires the RSEM
+   index, model file, and gene.results file created in the previous steps::
+
+     rsem-simulate-reads \
+         path/to/rsem/index/directory/camparee_output.transcriptome \
+         path/to/rsem/output/directory/quant_from_input_fastq.stat/quant_from_input_fastq.model \
+         path/to/rsem/simulation/directory/CAMPAREE.genes.results \
+         0 \
+         <NUMBER_OF_READS_TO_SIMULATE> \
+         path/to/rsem/simulation/directory/rsem.sim_results \
+         -seed 42
