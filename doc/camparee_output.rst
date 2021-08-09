@@ -72,23 +72,23 @@ separately for each parental allele.
 1. Activate CAMPAREE environment by running the following command from the
    CAMPAREE directory::
 
-       source ./venv_camparee/bin/activate
+     source ./venv_camparee/bin/activate
 
 2. Run *molecule_file_to_fasta_and_count_table.py* script to generate a single
    FASTA file and count table containing data from both parental alleles::
 
-    python path/to/CAMPAREE/bin/molecule_file_to_fasta_and_count_table.py \
-        -i path/to/CAMPAREE/molecule_file.txt \
-        -o path/to/output/dir/ \
-        -p "Output_Prefix." \
-        -t
+     python path/to/CAMPAREE/bin/molecule_file_to_fasta_and_count_table.py \
+         -i path/to/CAMPAREE/molecule_file.txt \
+         -o path/to/output/dir/ \
+         -p "Output_Prefix." \
+         -t
 
 3. To run Polyester, take note of the files generated in the previous step, and
    run the following R code (interactively or as a script):
 
     .. code-block:: R
 
-       library(polyester)
+        library(polyester)
         count_mat = read.table("path/to/CAMPAREE.count_table.txt", header = TRUE)
         simulate_experiment_countmat("path/to/CAMPAREE.transcriptome.fa",
                                      readmat=as.matrix(count_mat$Count),
@@ -119,16 +119,16 @@ perform separate BEERS runs for transcripts from each parental allele.
 1. Activate CAMPAREE environment by running the following command from the
    CAMPAREE directory::
 
-       source ./venv_camparee/bin/activate
+     source ./venv_camparee/bin/activate
 
 2. Run *molecule_file_to_fasta_and_count_table.py* script to generate separate
    FASTA files and count tables for each parental allele::
 
-    python path/to/CAMPAREE/bin/molecule_file_to_fasta_and_count_table.py \
-        -i path/to/CAMPAREE/molecule_file.txt \
-        -o path/to/output/dir/ \
-        -p "Output_Prefix." \
-        -t -s
+     python path/to/CAMPAREE/bin/molecule_file_to_fasta_and_count_table.py \
+         -i path/to/CAMPAREE/molecule_file.txt \
+         -o path/to/output/dir/ \
+         -p "Output_Prefix." \
+         -t -s
 
 3. BEERS requires a series of configuration files that define the sequences
    and genomic locations for all simulated transcripts. It is best to create a
@@ -136,14 +136,14 @@ perform separate BEERS runs for transcripts from each parental allele.
    remaining steps assume users have created PARENTAL_GENOME_1/ and
    PARENTAL_GENOME_2/ directories::
 
-       mkdir path/to/PARENTAL_GENOME_1/
-        mkdir path/to/PARENTAL_GENOME_2/
+     mkdir path/to/PARENTAL_GENOME_1/
+     mkdir path/to/PARENTAL_GENOME_2/
 
 4. CAMPAREE transcript annotation files require a few tweaks before they are
    ready for use with BEERS. Run the *prep_camparee_output_for_beers.pl*
    script on each of the parental annotation files to make these changes::
 
-    perl path/to/prep_camparee_output_for_beers.pl \
+     perl path/to/prep_camparee_output_for_beers.pl \
           path/to/camparee/output/updated_annotation_1_trimmed.txt \
           > PARENTAL_GENOME_1/updated_annotation_1_edited.no_header.txt
      perl path/to/prep_camparee_output_for_beers.pl \
@@ -155,15 +155,15 @@ perform separate BEERS runs for transcripts from each parental allele.
    need to be repeated for the second parental genome. Navigate to the directory
    of config files for the first parental genome::
 
-       cd path/to/PARENTAL_GENOME_1/
+     cd path/to/PARENTAL_GENOME_1/
 
 
 6. Remove entries with identical coordinates and intron/exon structures (even if
    they have different gene/tx IDs). This script re-numbers the gene IDs, so
    there are no gaps left by the removed transcripts::
 
-      perl path/to/beers/index_creation/remove_dups_in_geneinfo.pl \
-            updated_annotation_1_edited.no_header.txt
+     perl path/to/beers/index_creation/remove_dups_in_geneinfo.pl \
+          updated_annotation_1_edited.no_header.txt
 
 7. Remove transcripts that are < 200 bp in length. This number is chosen because
    BEERS most commonly simulate Illumina PE 2x100 bp reads. The simulator
@@ -172,7 +172,7 @@ perform separate BEERS runs for transcripts from each parental allele.
    there are no gaps left by the removed transcripts::
 
      perl path/to/beers/index_creation/remove_things_too_short_in_geneinfo.pl \
-           remove_dups.out
+          remove_dups.out
 
 8. The fix_annotation2.pl script includes several general fixes to the gene
    annotation file that can interfere with the simulator. These include removing
@@ -181,9 +181,9 @@ perform separate BEERS runs for transcripts from each parental allele.
    genome FASTA file prepared by CAMPAREE::
 
      perl path/to/beers/index_creation/fix_annotation2.pl \
-           remove_things_too_short.out \
-           path/to/camparee/output/custom_genome_1_edited.fa \
-           > fix_annotation2.out
+          remove_things_too_short.out \
+          path/to/camparee/output/custom_genome_1_edited.fa \
+          > fix_annotation2.out
 
 9. Next, since CAMPAREE also represents pre-mRNA, create separate entries for
    the pre-mRNA versions of each transcript. This allows for more granular
@@ -192,15 +192,15 @@ perform separate BEERS runs for transcripts from each parental allele.
    still present, but the mature form has been filtered out (or vice versa)::
 
      perl path/to/add_pre_mRNA_to_annotation.pl \
-           fix_annotation2.out \
-           > fix_annotation2.w_pre_mRNA.out
+          fix_annotation2.out \
+          > fix_annotation2.w_pre_mRNA.out
 
 10. Re-number BEERS gene IDs to account for anything removed during the previous
     steps::
 
      perl path/to/beers/index_creation/change_names_to_GENE.i_for_geneinfo.pl \
-           fix_annotation2.w_pre_mRNA.out \
-           > renumbered_geneids.out
+          fix_annotation2.w_pre_mRNA.out \
+          > renumbered_geneids.out
 
 11. Remove Ensembl gene and transcript IDs, leaving the generic "GENE.X"
     designators that the simulator uses. Also, map which "GENE.X" ids correspond
@@ -209,14 +209,14 @@ perform separate BEERS runs for transcripts from each parental allele.
      awk 'BEGIN{OFS = "\t"; print "Simulator.ID\tCAMPAREE.Transcript\tCAMPAREE.Gene"}; {print $10, $8, $9}' \
           renumbered_geneids.out \
           > Parental_Genome_1.BEERS_trancripts_to_CAMPAREE_transcripts.txt
-      cut -f 1-7,10 renumbered_geneids.out \
-          > simulator_config_geneinfo_parental_genome_1_from_camparee
+     cut -f 1-7,10 renumbered_geneids.out \
+         > simulator_config_geneinfo_parental_genome_1_from_camparee
 
 12. Generate a master list of exon coordinates from gene models. This script
     generates the "master_list_of_exons.txt" file used in the next step::
 
      perl path/to/beers/index_creation/get_master_list_of_exons_from_geneinfofile.pl \
-           simulator_config_geneinfo_parental_genome_1_from_camparee
+          simulator_config_geneinfo_parental_genome_1_from_camparee
 
 13. Generate the geneseq file from the master list of exons. The temp file
     stores an updated version of the geneinfo file if any of the gene models
@@ -225,19 +225,19 @@ perform separate BEERS runs for transcripts from each parental allele.
     geneinfo file to match the filename specified here::
 
      perl path/to/beers/index_creation/make_fasta_files_for_master_list_of_genes.pl \
-           path/to/camparee/output/custom_genome_1_edited.fa \
-           master_list_of_exons.txt \
-           simulator_config_geneinfo_parental_genome_1_from_camparee \
-           temp.simulator_config_geneinfo_parental_genome_1_from_camparee \
-           > simulator_config_geneseq_parental_genome_1_from_camparee
-      mv temp.simulator_config_geneinfo_parental_genome_1_from_camparee \
-         simulator_config_geneinfo_parental_genome_1_from_camparee
+          path/to/camparee/output/custom_genome_1_edited.fa \
+          master_list_of_exons.txt \
+          simulator_config_geneinfo_parental_genome_1_from_camparee \
+          temp.simulator_config_geneinfo_parental_genome_1_from_camparee \
+          > simulator_config_geneseq_parental_genome_1_from_camparee
+     mv temp.simulator_config_geneinfo_parental_genome_1_from_camparee \
+        simulator_config_geneinfo_parental_genome_1_from_camparee
 
 14. Generate a master list of intron coordinates from gene models. This script
     generates the "master_list_of_introns.txt" file used in the next step::
 
      perl path/to/beers/index_creation/get_master_list_of_introns_from_geneinfofile.pl \
-           simulator_config_geneinfo_parental_genome_1_from_camparee
+          simulator_config_geneinfo_parental_genome_1_from_camparee
 
 15. Generate the intronseq file from the master list of exons. Double-check the
     output of this file. Its error checking on the input files is not as
@@ -247,9 +247,9 @@ perform separate BEERS runs for transcripts from each parental allele.
     without throwing any errors::
 
      perl path/to/beers/index_creation/make_fasta_file_for_master_list_of_introns.pl \
-           path/to/camparee/output/custom_genome_1_edited.fa \
-           master_list_of_introns.txt \
-           > simulator_config_intronseq_parental_genome_1_from_camparee
+          path/to/camparee/output/custom_genome_1_edited.fa \
+          master_list_of_introns.txt \
+          > simulator_config_intronseq_parental_genome_1_from_camparee
 
 16. Prepare gene_dist file. This file stores the probability distribution of
     expression all transcripts in the BEERS annotation. Prepare this from the
@@ -257,7 +257,7 @@ perform separate BEERS runs for transcripts from each parental allele.
 
     .. code-block:: R
 
-       library(readr)
+        library(readr)
         library(dplyr)
         library(tidyr)
         library(tibble)
@@ -296,36 +296,40 @@ perform separate BEERS runs for transcripts from each parental allele.
     could be completely filled with genes that have 0 expression::
 
      perl path/to/beers/index_creation/make_featurequants.from_count_data.pl \
-           simulator_config_geneinfo_parental_genome_1_from_camparee \
-           Parental_Genome_1.gene_dist.txt \
-           100 \
-           > simulator_config_featurequantifications_parental_genome_1_from_camparee
+          simulator_config_geneinfo_parental_genome_1_from_camparee \
+          Parental_Genome_1.gene_dist.txt \
+          100 \
+          > simulator_config_featurequantifications_parental_genome_1_from_camparee
 
 18. Determine the number of reads to simulate, based upon the contents of the
     CAMPAREE count table::
 
      awk 'BEGIN{total=0}; (FNR > 1){total = total + $2}; END{print total}' \
-          path/to/CAMPAREE.count_table.Parental_genome_1.txt
+         path/to/CAMPAREE.count_table.Parental_genome_1.txt
 
 19. Having created all of the BEERS config files above, now the user needs to
     run BEERS to generate simulated reads. Again, this needs to be repeated for
     each parental genome. The BEERS command listed here is configured to run in
     an LSF cluster environment::
 
-        perl path/to/beers/reads_simulatorP_updated3.pl \
-              <NUMBER_OF_READS_TO_SIMULATE> \
-              Parental_Genome_1 \
-              500000 \
-              -strandspecific \
-              -error 0 \
-              -subfreq 0 \
-              -indelfreq 0 \
-              -intronfreq 0 \
-              -palt 0 \
-              -sn \
-              -configstem parental_genome_1_from_camparee \
-              -customcfgdir path/to/beers/config/directory/PARENTAL_GENOME_1/ \
-              -outdir path/to/output/directory/PARENTAL_GENOME_1/ \
-              -fraglength 100,250,500
+     perl path/to/beers/reads_simulatorP_updated3.pl \
+          <NUMBER_OF_READS_TO_SIMULATE> \
+          Parental_Genome_1 \
+          500000 \
+          -strandspecific \
+          -error 0 \
+          -subfreq 0 \
+          -indelfreq 0 \
+          -intronfreq 0 \
+          -palt 0 \
+          -sn \
+          -configstem parental_genome_1_from_camparee \
+          -customcfgdir path/to/beers/config/directory/PARENTAL_GENOME_1/ \
+          -outdir path/to/output/directory/PARENTAL_GENOME_1/ \
+          -fraglength 100,250,500
 
 20. Repeat all of the above steps for other parental genomes.
+
+
+RSEM
+^^^^
