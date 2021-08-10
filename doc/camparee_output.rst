@@ -330,18 +330,24 @@ perform separate BEERS runs for transcripts from each parental allele.
 
 20. Repeat all of the above steps for other parental genomes.
 
+After running BEERS, the output directories for each parental genome will
+contain FASTA files of simulated RNA-Seq reads originating from each parental
+allele.
+
 
 RSEM
 ^^^^
 
 RSEM can be used to both analyze and simulate allele-specific data, if
-configured with an allele-specific index. However, it is simpler to
+configured with an allele-specific index. However, it is simpler to generate
+data by treating each transcript from each parental allele as a separate gene.
+The instructions for Polyester and BEERS follow this same rough procedure.
 
 To run the RSEM simulator with CAMPAREE output, users can follow a similar
 procedure as Polyester. That is, users generate simulated data from both
 parental alleles with the FASTA file of CAMPAREE transcript sequences and the
 table of transcript counts (produced by the *molecule_file_to_fasta_and_count_table.py*
-script). Additionally, RSEM needs
+script).
 
 1. Activate CAMPAREE environment by running the following command from the
    CAMPAREE directory::
@@ -496,3 +502,6 @@ script). Additionally, RSEM needs
          <NUMBER_OF_READS_TO_SIMULATE> \
          path/to/rsem/simulation/directory/rsem.sim_results \
          -seed 42
+
+Following these steps, RSEM will produce two FASTQ files of simulated reads,
+along with a file
