@@ -1,4 +1,4 @@
-# Configuration File for CAMPAREE (v0.2.0)
+# Configuration File for CAMPAREE (v0.3.0)
 # See baby.config.yaml for an example of a fully specified config file.
 # Everything listed below is required, except for those labeled [OPTIONAL].
 # To remove optional arguments, they can be commented out by placing a "#"
@@ -25,7 +25,7 @@ setup:
     # [OPTIONAL] Specify the number of processors and the amount of RAM (in Mb)
     # the scheduler should request by default when submitting jobs. These values
     # are ignored if the scheduler_mode is set to "serial". The values specified
-    # here can also be overriden for specific steps in the pipeline that may
+    # here can also be overridden for specific steps in the pipeline that may
     # require more/fewer resources than the default values. See the "steps"
     # sections of this config file for further details.
     default_scheduler_parameters:
@@ -70,12 +70,12 @@ resources:
 
     # File containing a list of chromosome names and the number of homologous
     # copies for each gender in the species. Chromosome names must match those
-    # in the reference genome FASTA and annotational files, but may be a subset.
+    # in the reference genome FASTA and annotation files, but may be a subset.
     # Only the chromosomes specified in this file are used to generate
     # simulated transcripts. See www.smartURLdescribingEverything.com/ploidy
     # for full details on how to create ploidy file, and how it is used. The
     # bin/format_reference_files_for_camparee.py script also has the option to
-    # create a started ploidu file that will need to be edited to account for
+    # create a started ploidy file that will need to be edited to account for
     # non-diploid organisms and non-autosomal chromosomes.
     chr_ploidy_filename: MusMusculus_GRCm38_Ensemblv99.chr_ploidy.txt
 
@@ -88,9 +88,36 @@ input:
     # the resulting BAM files are saved to the output directory (specified
     # below).
     bam_directory_path: /path/to/BAM/files/
+
+    ### Optional input files used across all samples
+    # While CAMPAREE will infer/phase genetic variants, and estimate various
+    # empirical distributions from the input data, users have the option to
+    # specify their own versions of these data. This section of the config file
+    # is where users direct CAMPAREE to the locations of the files containing
+    # pre-computed data/distributions prepared by the user. Each entry below
+    # will describe the type and/or format of the file CAMPAREE requires to use
+    # the optional input. Specifying these optional inputs may skip associated
+    # steps in the CAMPAREE pipeline (e.g. CAMPAREE will not repeat genotype
+    # phasing if provided with a phased vcf file). Lastly, as the name of this
+    # section implies, all entries here are optional.
+    optional_inputs:
+        # [OPTIONAL] Path to directory containing BAM files for all samples. Note,
+        # BAM files are only read from here. If CAMPAREE performs the alignment,
+        # the resulting BAM files are saved to the output directory (specified
+        # below).
+        #bam_directory_path: /path/to/BAM/files/
+        # [OPTIONAL] VCF file containing phased genotypes for each sample. The
+        # sample genotype columns must use the same names as the samples they
+        # correspond to (e.g. sample1, sample2, etc.). The format of this input
+        # file is not currently checked to make sure it matches beagle output
+        # exactly. We plan to add checks of the VCF file's format in future
+        # releases of CAMPAREE. Lastly, the VCF file will be treated as
+        # gzipped if its name ends with '.gz'.
+        #phased_vcf_file: /path/to/phased_vcf_file.
+
     ### Per-sample information (input files, attributes)
     data:
-        # Alpha-numerica name (including underscores) for each sample. This
+        # Alpha-numeric name (including underscores) for each sample. This
         # will be used to name the output directory specific to this sample.
         'sample1_Name':
             # Names for the forward and reverse fastq files (order matters).
@@ -100,39 +127,83 @@ input:
             fastq_files:
                 - sample1.forward.fastq.gz
                 - sample1.reverse.fastq.gz
-            # [OPTIONAL] STAR-aligned BAM files generated from the same FASTQ
-            # files listed above. Must have been aligned using the
-            # '--outSAMtype BAM SortedByCoordinate' option (or some other means
-            # to sort alignments by chromsome coordinates).
-            bam_file: 'bamfile.bam'
             # Was RNA-seq library was created from a pool of individuals? If so,
             # it is not feasible to infer parental genotypes from variants
             # contained in the RNA-seq data. Setting this to 'True' will skip
-            # all variant-calling, phasing, parental genome construciton, and
+            # all variant-calling, phasing, parental genome construction, and
             # allele-specific quantification operations in the CAMPAREE pipeline.
             # Simulated transcripts will effectively be generated from the
             # haploid reference genome.
             pooled: False
             # Gender of the input samples. This will be used in combination with
             # the chromosome ploidy file to determine which chromosomes have
-            # homologoues pairs, and should therefore show allele-specific
+            # homologous pairs, and should therefore show allele-specific
             # expression.  If gender is unknown, the value can be set to 'null'
             # but certain chromosomes will not be included.
             gender: female
             # [OPTIONAL] Number of RNA transcript molecules to simulate for this
             # sample. CAMPAREE will use the default molecule count (specified in
             # the 'output' section of this config file) if no molecule count is
-            # provided at the sample level, or if it is overriden in the
+            # provided at the sample level, or if it is overridden in the
             # 'output' section of this config file.
             molecule_count: 1000000
+            ### Per-sample optional input files
+            # This section allows users to provide CAMPAREE with pre-computed
+            # empirical distributions and intermediate files specific to
+            # individual samples. As with the other optional_inputs section
+            # defined above, providing files here may allow CAMPAREE to skip
+            # steps in the pipeline for this subject (e.g. CAMPAREE will not
+            # repeat genome alignment given an aligned BAM file). Again, all
+            # entries in this section are optional.
+            optional_inputs:
+                # [OPTIONAL] STAR-aligned BAM files generated from the same FASTQ
+                # files listed above. Must have been aligned using the
+                # '--outSAMtype BAM SortedByCoordinate' option (or some other means
+                # to sort alignments by chromosome coordinates).
+                #bam_file: 'bamfile.bam'
+                # [OPTIONAL] Tab-delimited text file describing the per-transcript
+                # distribution of intronic reads. This file is normally created
+                # by the CAMPAREE IntronQuantificationStep and provides an
+                # empirical estimate of intronic signal.
+                #intron_quant: /path/to/intron_quantifications.txt
+                # [OPTIONAL] Tab-delimited text file describing gene-level
+                # distribution of reads. This file is normally created by the
+                # CAMPAREE TranscriptGeneQuantificationStep and provides an
+                # empirical estimate of gene signal. Note, providing this file
+                # will only skip the associated steps in the pipeline if the
+                # 'psi_quant' file (see below) is also provided, since these are
+                # both generated by the same steps in the pipeline.
+                #gene_quant: /path/to/gene_quantifications.txt
+                # [OPTIONAL] Tab-delimited text file describing the distribution
+                # of PSI (percent splicing included) values across all transcripts.
+                # PSI values are the percentage of reads from a gene that originate
+                # for each transcript associated with that gene. This file is
+                # normally created by the CAMPAREE TranscriptGeneQuantificationStep
+                # and provides an empirical estimate of alternative splicing.
+                # Note, providing this file will only skip the associated steps
+                # in the pipeline if the 'gene_quant' file (see above) is also
+                # provided, since these are both generated by the same steps in
+                # the pipeline.
+                #psi_quant: /path/to/isoform_psi_value_quantifications.txt
+                # [OPTIONAL] Tab-delimited text file describing the gene-level
+                # distribution of reads originating from each parental allele.
+                # This file is normally created by the CAMPAREE
+                # AllelicImbalanceQuantificationStep.
+                #allele_quant: /path/to/allelic_imbalance_quantifications.txt
+
         'sample2_Name':
             fastq_files:
                 - sample2.forward.fastq.gz
                 - sample2.reverse.fastq.gz
-            bam_file: 'bamfile.bam'
             pooled: False
             gender: male
             molecule_count: 1000000
+            optional_inputs:
+                #bam_file: 'bamfile.bam'
+                #intron_quant: /path/to/intron_quantifications.txt
+                #gene_quant: /path/to/gene_quantifications.txt
+                #psi_quant: /path/to/isoform_psi_value_quantifications.txt
+                #allele_quant: /path/to/allelic_imbalance_quantifications.txt
 
 ### Output directory and parameters
 output:
@@ -143,7 +214,7 @@ output:
     # file: creates a raw text file of the molecules, their source locations on
     #       the parental and reference genomes, and the CIGAR strings mapping the
     #       molecules on the parental and reference genomes.
-    # packet: A binay file of molecule information suitable for use by the BEERS2
+    # packet: A binary file of molecule information suitable for use by the BEERS2
     #         simulator. This file is currently pickled, but this is likely to
     #         change.
     type: file
@@ -197,7 +268,7 @@ steps:
         parameters:
             # Read (forward or reverse) used to determine strand of aligned
             # fragment. If set to true, strand information is taken from the
-            # forwad read. [DEFAULT] If set to false, strand information is taken
+            # forward read. [DEFAULT] If set to false, strand information is taken
             # from the reverse read. The latter is used for dUTP-based protocols,
             # like the Illumina TruSeq Stranded kits.
             forward_read_is_sense: false
@@ -242,7 +313,7 @@ steps:
             # genomes.
             ignore_snps: false
     # Update transcript annotation coordinates to reflect changes made when
-    # constructring each parental genome sequence.
+    # constructing each parental genome sequence.
     'update_annotation_for_genome.UpdateAnnotationForGenomeStep':
     # Prepare transcriptome sequence given a parental genome sequence and the
     # associated annotation.
@@ -283,7 +354,7 @@ steps:
     # Generate gene, transcript, and PSI value distributions from the kallisto
     # quantification results of both parental genomes/transcriptomes.
     'transcript_gene_quant.TranscriptGeneQuantificationStep':
-    # Generate distribution of allelic imblance from the Bowtie2 transcriptome
+    # Generate distribution of allelic imbalance from the Bowtie2 transcriptome
     # alignments to both parental genomes/transcriptomes. This step also uses
     # the reference genome alignments generated by the GenomeAlignmentStep, or
     # provided by the user.

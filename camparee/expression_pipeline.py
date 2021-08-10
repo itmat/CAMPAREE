@@ -34,6 +34,8 @@ class ExpressionPipeline:
         self.log_directory_path = log_directory_path
         self.create_intermediate_data_subdirectories(data_directory_path, log_directory_path)
         self.log_file_path = os.path.join(log_directory_path, "expression_pipeline.log")
+        self.optional_inputs = {}
+        self.sample_optional_inputs = {}
         self.steps = {}
         #Track pathes of scripts for each step. This is needed when running the
         #steps from the command line, as we do when submitting to lsf.
@@ -58,6 +60,17 @@ class ExpressionPipeline:
         if not self.validate_and_set_output_data(configuration['output']):
             raise CampareeValidationException("The output data is not completely valid.  "
                                               "Consult the standard error file for details.")
+
+        # Validate and instantiate optional input files
+        if not self.validate_and_set_optional_inputs(configuration['input']['optional_inputs']):
+            raise CampareeValidationException("There was a problem with the optional inputs. "
+                                              "Consult the standard error file for details.")
+
+        # Validate and instantiate sample-specific optional input files
+        if not self.validate_and_set_sample_optional_inputs(configuration['input']['data']):
+            raise CampareeValidationException("There was a problem with the per sample "
+                                              "optional inputs. Consult the standard error "
+                                              "file for details.")
 
         # Load default scheduler parameters (if provided)
         print(f"Running CAMPAREE using the {self.scheduler_mode} job scheduler.",
@@ -159,6 +172,116 @@ class ExpressionPipeline:
             valid = False
 
         return valid
+
+    def validate_and_set_optional_inputs(self, optional_inputs):
+        """Helper method to validate and set optional inputs.
+
+        Parameters
+        ----------
+        optional_inputs : dict
+            Optional input files specified in the config file.
+
+        Returns
+        -------
+        boolean
+            True for valid optional inputs and False otherwise.
+
+        """
+
+        valid = True
+
+        # Initialize list of all optional inputs
+        self.optional_inputs['phased_vcf_file'] = None
+
+        # If user hasn't specified any optional inputs, skip all validation steps.
+        # This prevents errors when trying to access different elements of
+        # optional_inputs.
+        if optional_inputs is None:
+            return valid
+
+        # Check for presence of phased VCF file and validate existence.
+        self.optional_inputs['phased_vcf_file'] = optional_inputs.get('phased_vcf_file', None)
+        if self.optional_inputs['phased_vcf_file'] is not None:
+            if not os.path.exists(self.optional_inputs['phased_vcf_file']) or \
+               not os.path.isfile(self.optional_inputs['phased_vcf_file']):
+                print(f"The phased vsf file specified under the optional inputs,"
+                      f" {self.optional_inputs['phased_vcf_file']}, does not exist.",
+                      file=sys.stderr)
+                valid = False
+
+        return valid
+
+    def validate_and_set_sample_optional_inputs(self, sample_inputs):
+        """Helper method to validate and set per sample optional inputs.
+
+        Parameters
+        ----------
+        sample_inputs : dict
+            Subject input parameters specified in the 'data' section of the
+            config file.
+
+        Returns
+        -------
+        boolean
+            True for valid per sample optional inputs and False otherwise.
+
+        """
+
+        valid = True
+
+        # TODO: incorporate BAM files into this optional input framework.
+
+        # Still treat optional BAM files as a special case, handled by the
+        # CAMPAREE controller class.
+        available_optional_inputs = [
+            # 'bam_file': None,
+            'intron_quant',
+            'gene_quant',
+            'psi_quant',
+            'allele_quant'
+        ]
+
+        for sample in self.samples:
+            # Initialize dictionary  of optional files for current subject and
+            # set all optional inputs to None.
+            self.sample_optional_inputs[sample.sample_id] = {key: None for key in available_optional_inputs}
+            # Skip to next sample if the current one has no optional inputs
+            if sample_inputs[sample.sample_name]['optional_inputs'] is None:
+                continue
+            for optional_input, filename in sample_inputs[sample.sample_name]['optional_inputs'].items():
+                # Treat optional BAM files as a special case, handled by the
+                # CAMPAREE controller class.
+                if optional_input == 'bam_file':
+                    continue
+                if optional_input in available_optional_inputs:
+                    if filename is None:
+                        # No filename given
+                        print(f"No filename specified for optional input "
+                              f"'{optional_input}', in config file for sample "
+                              f"{sample.sample_name}.",
+                              file=sys.stderr)
+                        valid = False
+                    elif not os.path.exists(filename) or not os.path.isfile(filename):
+                        # Given file does not exist
+                        print(f"File specified for optional input '{optional_input}'"
+                              f" of sample {sample.sample_name},\n{filename}\n"
+                              f"does not exist.",
+                              file=sys.stderr)
+                        valid = False
+                    else:
+                        self.sample_optional_inputs[sample.sample_id][optional_input] = filename
+                else:
+                    # Note, sort list of dictionary keys so this error message
+                    # is consistent. The keys in default dictionaries are not
+                    # maintained/returned in a sorted order.
+                    print(f"Unrecognized optional input '{optional_input}', in "
+                          f"config file for sample {sample.sample_name}.\n"
+                          f"Must be one of the following: {','.join(sorted(available_optional_inputs))}.",
+                          file=sys.stderr)
+                    valid = False
+
+        return valid
+
 
     def set_third_party_software(self):
         """
@@ -309,13 +432,14 @@ class ExpressionPipeline:
                           dependency_list=[f"GenomeBamIndexStep.{sample.sample_id}"])
 
         for sample in self.samples:
-            output_directory = os.path.join(self.data_directory_path, f"sample{sample.sample_id}")
-            bam_filename = bam_files[sample.sample_id]
-            self.run_step(step_name='IntronQuantificationStep',
-                          sample=sample,
-                          execute_args=[bam_filename, output_directory, self.annotation_file_path],
-                          cmd_line_args=[bam_filename, output_directory, self.annotation_file_path],
-                          dependency_list=[f"GenomeBamIndexStep.{sample.sample_id}"])
+            if self.sample_optional_inputs[sample.sample_id]['intron_quant'] is None:
+                output_directory = os.path.join(self.data_directory_path, f"sample{sample.sample_id}")
+                bam_filename = bam_files[sample.sample_id]
+                self.run_step(step_name='IntronQuantificationStep',
+                              sample=sample,
+                              execute_args=[bam_filename, output_directory, self.annotation_file_path],
+                              cmd_line_args=[bam_filename, output_directory, self.annotation_file_path],
+                              dependency_list=[f"GenomeBamIndexStep.{sample.sample_id}"])
             #TODO: do we need to depend upon the index being done? or just the alignment?
             #      I'm hypothesizing that some failures are being caused by indexing and quantification happening
             #      on the same BAM file at the same time, though I don't know why this would be a problem.
@@ -330,12 +454,15 @@ class ExpressionPipeline:
                                      self.reference_genome_file_path, seed],
                       dependency_list=[f"VariantsFinderStep.{sample.sample_id}" for sample in self.samples])
 
-        seed = seeds["BeagleStep"]
-        self.run_step(step_name='BeagleStep',
-                      sample=None,
-                      execute_args=[self.beagle_file_path, seed],
-                      cmd_line_args=[self.beagle_file_path, seed],
-                      dependency_list=[f"VariantsCompilationStep"])
+        phased_vcf_file = self.optional_inputs['phased_vcf_file']
+        # If user did not provide phased vcf file
+        if phased_vcf_file is None:
+            seed = seeds["BeagleStep"]
+            self.run_step(step_name='BeagleStep',
+                          sample=None,
+                          execute_args=[self.beagle_file_path, seed],
+                          cmd_line_args=[self.beagle_file_path, seed],
+                          dependency_list=[f"VariantsCompilationStep"])
 
         #TODO: We could load all of the steps in the entire pipeline into the queue
         #      and then just have the queue keep running until everything finishes.
@@ -344,13 +471,19 @@ class ExpressionPipeline:
         self.expression_pipeline_monitor.monitor_until_all_jobs_completed(queue_update_interval=10)
 
         for sample in self.samples:
-            print(f"Processing sample{sample.sample_id} ({sample.sample_name}...")
+            print(f"Processing sample{sample.sample_id} ({sample.sample_name})...")
+            dep_list = None
+            if phased_vcf_file is None:
+                phased_vcf_file = os.path.join(self.data_directory_path,
+                                                          CAMPAREE_CONSTANTS.BEAGLE_OUTPUT_FILENAME)
+                dep_list = [f"BeagleStep"]
             self.run_step(step_name='GenomeBuilderStep',
                           sample=sample,
-                          execute_args=[sample, self.chr_ploidy_data, self.reference_genome],
-                          cmd_line_args=[sample, self.chr_ploidy_file_path,
+                          execute_args=[sample, phased_vcf_file, self.chr_ploidy_data,
+                                        self.reference_genome],
+                          cmd_line_args=[sample, phased_vcf_file, self.chr_ploidy_file_path,
                                          self.reference_genome_file_path],
-                          dependency_list=[f"BeagleStep"])
+                          dependency_list=dep_list)
 
             for suffix in [1, 2]:
                 self.run_step(step_name='UpdateAnnotationForGenomeStep',
@@ -377,93 +510,138 @@ class ExpressionPipeline:
 
                 tx_fasta_path = os.path.join(self.data_directory_path, f'sample{sample.sample_id}',
                                              CAMPAREE_CONSTANTS.TRANSCRIPTOME_FASTA_OUTPUT_FILENAME_PATTERN.format(genome_name=suffix))
-                self.run_step(step_name='KallistoIndexStep',
+
+                # Necessary for both gene and PSI quantification. Do not skip if
+                # user provides optional input for only one of these distributions.
+                if self.sample_optional_inputs[sample.sample_id]['gene_quant'] is None or \
+                   self.sample_optional_inputs[sample.sample_id]['psi_quant'] is None:
+                    self.run_step(step_name='KallistoIndexStep',
+                                  sample=sample,
+                                  execute_args=[sample.sample_id, suffix, self.kallisto_file_path,
+                                                tx_fasta_path],
+                                  cmd_line_args=[sample.sample_id, suffix, self.kallisto_file_path,
+                                                 tx_fasta_path],
+                                  dependency_list=[f"TranscriptomeFastaPreparationStep.{sample.sample_id}.{suffix}"],
+                                  jobname_suffix=suffix)
+
+                    self.run_step(step_name='KallistoQuantStep',
+                                  sample=sample,
+                                  execute_args=[sample, suffix, self.kallisto_file_path],
+                                  cmd_line_args=[sample, suffix, self.kallisto_file_path],
+                                  dependency_list=[f"KallistoIndexStep.{sample.sample_id}.{suffix}"],
+                                  jobname_suffix=suffix)
+
+                # Bowtie2 output only used for quantification of allelic imbalance.
+                if self.sample_optional_inputs[sample.sample_id]['allele_quant'] is None:
+                    self.run_step(step_name='Bowtie2IndexStep',
+                                  sample=sample,
+                                  execute_args=[sample.sample_id, suffix, self.bowtie2_dir_path,
+                                                tx_fasta_path],
+                                  cmd_line_args=[sample.sample_id, suffix, self.bowtie2_dir_path,
+                                                 tx_fasta_path],
+                                  dependency_list=[f"TranscriptomeFastaPreparationStep.{sample.sample_id}.{suffix}"],
+                                  jobname_suffix=suffix)
+
+                    self.run_step(step_name='Bowtie2AlignStep',
+                                  sample=sample,
+                                  execute_args=[sample, suffix, self.bowtie2_dir_path],
+                                  cmd_line_args=[sample, suffix, self.bowtie2_dir_path],
+                                  dependency_list=[f"Bowtie2IndexStep.{sample.sample_id}.{suffix}"],
+                                  jobname_suffix=suffix)
+
+            # Necessary for both gene and PSI quantification. Do not skip if
+            # user provides optional input for only one of these distributions.
+            if self.sample_optional_inputs[sample.sample_id]['gene_quant'] is None or \
+               self.sample_optional_inputs[sample.sample_id]['psi_quant'] is None:
+                # Use kallisto quantifications from the first parental genome to estimate
+                # gene, transcript, and PSI quantifications for the simulated data.
+                suffix=1
+                kallisto_quant_path = os.path.join(self.data_directory_path, f'sample{sample.sample_id}',
+                                                   CAMPAREE_CONSTANTS.KALLISTO_QUANT_DIR_PATTERN.format(genome_name=suffix),
+                                                   CAMPAREE_CONSTANTS.KALLISTO_ABUNDANCE_FILENAME)
+                update_annot_path = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
+                                                 CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name=suffix))
+                self.run_step(step_name='TranscriptGeneQuantificationStep',
                               sample=sample,
-                              execute_args=[sample.sample_id, suffix, self.kallisto_file_path,
-                                            tx_fasta_path],
-                              cmd_line_args=[sample.sample_id, suffix, self.kallisto_file_path,
-                                             tx_fasta_path],
-                              dependency_list=[f"TranscriptomeFastaPreparationStep.{sample.sample_id}.{suffix}"],
-                              jobname_suffix=suffix)
+                              execute_args=[sample.sample_id, kallisto_quant_path, update_annot_path],
+                              cmd_line_args=[sample.sample_id, kallisto_quant_path, update_annot_path],
+                              dependency_list=[f"KallistoQuantStep.{sample.sample_id}.{suffix}"])
 
-                self.run_step(step_name='KallistoQuantStep',
+            if self.sample_optional_inputs[sample.sample_id]['allele_quant'] is None:
+                genome_alignment_path = bam_files[sample.sample_id]
+                update_annot_path_1 = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
+                                                   CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name='1'))
+                update_annot_path_2 = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
+                                                   CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name='2'))
+                tx_align_path_1 = os.path.join(self.data_directory_path, f'sample{sample.sample_id}',
+                                               CAMPAREE_CONSTANTS.BOWTIE2_ALIGN_FILENAME_PATTERN.format(genome_name='1'))
+                tx_align_path_2 = os.path.join(self.data_directory_path, f'sample{sample.sample_id}',
+                                               CAMPAREE_CONSTANTS.BOWTIE2_ALIGN_FILENAME_PATTERN.format(genome_name='2'))
+                self.run_step(step_name='AllelicImbalanceQuantificationStep',
                               sample=sample,
-                              execute_args=[sample, suffix, self.kallisto_file_path],
-                              cmd_line_args=[sample, suffix, self.kallisto_file_path],
-                              dependency_list=[f"KallistoIndexStep.{sample.sample_id}.{suffix}"],
-                              jobname_suffix=suffix)
-
-                self.run_step(step_name='Bowtie2IndexStep',
-                              sample=sample,
-                              execute_args=[sample.sample_id, suffix, self.bowtie2_dir_path,
-                                            tx_fasta_path],
-                              cmd_line_args=[sample.sample_id, suffix, self.bowtie2_dir_path,
-                                             tx_fasta_path],
-                              dependency_list=[f"TranscriptomeFastaPreparationStep.{sample.sample_id}.{suffix}"],
-                              jobname_suffix=suffix)
-
-                self.run_step(step_name='Bowtie2AlignStep',
-                              sample=sample,
-                              execute_args=[sample, suffix, self.bowtie2_dir_path],
-                              cmd_line_args=[sample, suffix, self.bowtie2_dir_path],
-                              dependency_list=[f"Bowtie2IndexStep.{sample.sample_id}.{suffix}"],
-                              jobname_suffix=suffix)
-
-            # Use kallisto quantifications from the first parental genome to estimate
-            # gene, transcript, and PSI quantifications for the simulated data.
-            suffix=1
-            kallisto_quant_path = os.path.join(self.data_directory_path, f'sample{sample.sample_id}',
-                                               CAMPAREE_CONSTANTS.KALLISTO_QUANT_DIR_PATTERN.format(genome_name=suffix),
-                                               CAMPAREE_CONSTANTS.KALLISTO_ABUNDANCE_FILENAME)
-            update_annot_path = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
-                                             CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name=suffix))
-            self.run_step(step_name='TranscriptGeneQuantificationStep',
-                          sample=sample,
-                          execute_args=[sample.sample_id, kallisto_quant_path, update_annot_path],
-                          cmd_line_args=[sample.sample_id, kallisto_quant_path, update_annot_path],
-                          dependency_list=[f"KallistoQuantStep.{sample.sample_id}.{suffix}"])
-
-            genome_alignment_path = bam_files[sample.sample_id]
-            update_annot_path_1 = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
-                                               CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name='1'))
-            update_annot_path_2 = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
-                                               CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name='2'))
-            tx_align_path_1 = os.path.join(self.data_directory_path, f'sample{sample.sample_id}',
-                                           CAMPAREE_CONSTANTS.BOWTIE2_ALIGN_FILENAME_PATTERN.format(genome_name='1'))
-            tx_align_path_2 = os.path.join(self.data_directory_path, f'sample{sample.sample_id}',
-                                           CAMPAREE_CONSTANTS.BOWTIE2_ALIGN_FILENAME_PATTERN.format(genome_name='2'))
-            self.run_step(step_name='AllelicImbalanceQuantificationStep',
-                          sample=sample,
-                          execute_args=[sample.sample_id, genome_alignment_path, update_annot_path_1,
-                                        update_annot_path_2, tx_align_path_1, tx_align_path_2],
-                          cmd_line_args=[sample.sample_id, genome_alignment_path, update_annot_path_1,
-                                         update_annot_path_2, tx_align_path_1, tx_align_path_2],
-                          dependency_list=[f"Bowtie2AlignStep.{sample.sample_id}.1",
-                                           f"Bowtie2AlignStep.{sample.sample_id}.2"])
+                              execute_args=[sample.sample_id, genome_alignment_path, update_annot_path_1,
+                                            update_annot_path_2, tx_align_path_1, tx_align_path_2],
+                              cmd_line_args=[sample.sample_id, genome_alignment_path, update_annot_path_1,
+                                             update_annot_path_2, tx_align_path_1, tx_align_path_2],
+                              dependency_list=[f"Bowtie2AlignStep.{sample.sample_id}.1",
+                                               f"Bowtie2AlignStep.{sample.sample_id}.2"])
 
             seed = seeds[f"MoleculeMakerStep.{sample.sample_id}"]
             num_molecules_to_generate = sample.molecule_count
+            # Use default or user-provided distribution files
+            intron_quant_path = self.sample_optional_inputs[sample.sample_id]['intron_quant']
+            gene_quant_path = self.sample_optional_inputs[sample.sample_id]['gene_quant']
+            psi_quant_path = self.sample_optional_inputs[sample.sample_id]['psi_quant']
+            allele_quant_path = self.sample_optional_inputs[sample.sample_id]['allele_quant']
+            # These dependencies are only necessary if user provides optional
+            # input for gene_quants, psi_quants, *and* allele_quants. This would
+            # cause CAMPAREE to skip the steps used to generate those files. These
+            # steps are dependent upon the TranscriptomeFastaPreparationStep and,
+            # normally cause the pipeline to wait for the TranscriptomeFastaPreparationStep
+            # to finish. If these steps that depend on TranscriptomeFastaPreparationStep
+            # don't run, then the MoleculeMakerStep will start before the
+            # TranscriptomeFastaPreparationStep has completed. This causes an
+            # error because the molecule maker needs the transcriptome FASTA
+            # produced by this step.
+            dep_list = [f"TranscriptomeFastaPreparationStep.{sample.sample_id}.1",
+                        f"TranscriptomeFastaPreparationStep.{sample.sample_id}.2"]
+            if intron_quant_path is None:
+                intron_quant_path = os.path.join(self.data_directory_path,
+                                                 f'sample{sample.sample_id}',
+                                                 CAMPAREE_CONSTANTS.INTRON_OUTPUT_FILENAME)
+            if gene_quant_path is None:
+                gene_quant_path = os.path.join(self.data_directory_path,
+                                                 f'sample{sample.sample_id}',
+                                                 CAMPAREE_CONSTANTS.TXQUANT_OUTPUT_GENE_FILENAME)
+                dep_list.append(f"TranscriptGeneQuantificationStep.{sample.sample_id}")
+            if psi_quant_path is None:
+                psi_quant_path = os.path.join(self.data_directory_path,
+                                                 f'sample{sample.sample_id}',
+                                                 CAMPAREE_CONSTANTS.TXQUANT_OUTPUT_PSI_FILENAME)
+                # Dependency already added if user did not provide gene quant.
+                if f"TranscriptGeneQuantificationStep.{sample.sample_id}" not in dep_list:
+                    dep_list.append(f"TranscriptGeneQuantificationStep.{sample.sample_id}")
+            if allele_quant_path is None:
+                allele_quant_path = os.path.join(self.data_directory_path,
+                                                 f'sample{sample.sample_id}',
+                                                 CAMPAREE_CONSTANTS.ALLELIC_IMBALANCE_OUTPUT_FILENAME)
+                dep_list.append(f"AllelicImbalanceQuantificationStep.{sample.sample_id}")
+
             # If no molecule count specified for this sample, use the default count.
             if not num_molecules_to_generate or self.override_sample_molecule_count:
                 num_molecules_to_generate = self.default_molecule_count
             self.run_step(step_name='MoleculeMakerStep',
                           sample=sample,
-                          execute_args=[sample, self.output_type, num_molecules_to_generate, seed],
-                          cmd_line_args=[sample, self.output_type, num_molecules_to_generate, seed],
-                          dependency_list=[f"TranscriptGeneQuantificationStep.{sample.sample_id}",
-                                           f"AllelicImbalanceQuantificationStep.{sample.sample_id}"])
+                          execute_args=[sample, intron_quant_path, gene_quant_path,
+                                        psi_quant_path, allele_quant_path,
+                                        self.output_type, num_molecules_to_generate, seed],
+                          cmd_line_args=[sample, intron_quant_path, gene_quant_path,
+                                         psi_quant_path, allele_quant_path,
+                                         self.output_type, num_molecules_to_generate, seed],
+                          dependency_list=dep_list)
 
         self.expression_pipeline_monitor.monitor_until_all_jobs_completed(queue_update_interval=10)
 
-            #for _ in range(2):
-            #    quantifier = Quantify(annotation_updates, self.alignment_filename)
-            #    transcript_distributions.append(quantifier.quantify())
-            #for i, item in enumerate(genomes):
-            #    genome = item[0]
-            #    transcript_maker = TranscriptMaker(genome, annotation_updates[i], transcript_distributions[i], self.parameters)
-            #    molecules.append(transcript_maker.prepare_transcripts())
-            #r_rna = RibosomalRNA(self.parameters)
-            #molecules.append(r_rna.generate_rRNA_sample())
         print("Execution of the Expression Pipeline Ended")
 
     def generate_job_seeds(self):
