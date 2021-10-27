@@ -415,16 +415,16 @@ class ExpressionPipeline:
             self.run_step(step_name='GenomeBamIndexStep',
                           sample=sample,
                           cmd_line_args=[sample, bam_filename],
-                          dependency_list=[f"GenomeAlignmentStep.{sample.sample_id}"])
+                          dependency_list=[f"GenomeAlignmentStep_{sample.sample_id}"])
 
         for sample in self.samples:
             bam_filename = bam_files[sample.sample_id]
-            seed = seeds[f"VariantsFinderStep.{sample.sample_id}"]
+            seed = seeds[f"VariantsFinderStep_{sample.sample_id}"]
             self.run_step(step_name='VariantsFinderStep',
                           sample=sample,
                           cmd_line_args=[sample, bam_filename, self.chr_ploidy_file_path,
                                          self.reference_genome_file_path, seed],
-                          dependency_list=[f"GenomeBamIndexStep.{sample.sample_id}"])
+                          dependency_list=[f"GenomeBamIndexStep_{sample.sample_id}"])
 
         for sample in self.samples:
             if self.sample_optional_inputs[sample.sample_id]['intron_quant'] is None:
@@ -433,7 +433,7 @@ class ExpressionPipeline:
                 self.run_step(step_name='IntronQuantificationStep',
                               sample=sample,
                               cmd_line_args=[bam_filename, output_directory, self.annotation_file_path],
-                              dependency_list=[f"GenomeBamIndexStep.{sample.sample_id}"])
+                              dependency_list=[f"GenomeBamIndexStep_{sample.sample_id}"])
             #TODO: do we need to depend upon the index being done? or just the alignment?
             #      I'm hypothesizing that some failures are being caused by indexing and quantification happening
             #      on the same BAM file at the same time, though I don't know why this would be a problem.
@@ -444,7 +444,7 @@ class ExpressionPipeline:
                       cmd_line_args=[[sample.sample_id for sample in self.samples],
                                      self.chr_ploidy_file_path,
                                      self.reference_genome_file_path, seed],
-                      dependency_list=[f"VariantsFinderStep.{sample.sample_id}" for sample in self.samples])
+                      dependency_list=[f"VariantsFinderStep_{sample.sample_id}" for sample in self.samples])
 
         phased_vcf_file = self.optional_inputs['phased_vcf_file']
         # If user did not provide phased vcf file
@@ -479,7 +479,7 @@ class ExpressionPipeline:
                               sample=sample,
                               cmd_line_args=[sample, suffix, self.annotation_file_path,
                                              self.chr_ploidy_file_path],
-                              dependency_list=[f"GenomeBuilderStep.{sample.sample_id}"],
+                              dependency_list=[f"GenomeBuilderStep_{sample.sample_id}"],
                               jobname_suffix=suffix)
 
                 update_annot_path = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
@@ -490,7 +490,7 @@ class ExpressionPipeline:
                               sample=sample,
                               cmd_line_args=[sample.sample_id, suffix, parental_genome_path,
                                              update_annot_path],
-                              dependency_list=[f"UpdateAnnotationForGenomeStep.{sample.sample_id}.{suffix}"],
+                              dependency_list=[f"UpdateAnnotationForGenomeStep_{sample.sample_id}-{suffix}"],
                               jobname_suffix=suffix)
 
                 tx_fasta_path = os.path.join(self.data_directory_path, f'sample{sample.sample_id}',
@@ -504,13 +504,13 @@ class ExpressionPipeline:
                                   sample=sample,
                                   cmd_line_args=[sample.sample_id, suffix, self.kallisto_file_path,
                                                  tx_fasta_path],
-                                  dependency_list=[f"TranscriptomeFastaPreparationStep.{sample.sample_id}.{suffix}"],
+                                  dependency_list=[f"TranscriptomeFastaPreparationStep_{sample.sample_id}-{suffix}"],
                                   jobname_suffix=suffix)
 
                     self.run_step(step_name='KallistoQuantStep',
                                   sample=sample,
                                   cmd_line_args=[sample, suffix, self.kallisto_file_path],
-                                  dependency_list=[f"KallistoIndexStep.{sample.sample_id}.{suffix}"],
+                                  dependency_list=[f"KallistoIndexStep_{sample.sample_id}-{suffix}"],
                                   jobname_suffix=suffix)
 
                 # Bowtie2 output only used for quantification of allelic imbalance.
@@ -519,13 +519,13 @@ class ExpressionPipeline:
                                   sample=sample,
                                   cmd_line_args=[sample.sample_id, suffix, self.bowtie2_dir_path,
                                                  tx_fasta_path],
-                                  dependency_list=[f"TranscriptomeFastaPreparationStep.{sample.sample_id}.{suffix}"],
+                                  dependency_list=[f"TranscriptomeFastaPreparationStep_{sample.sample_id}-{suffix}"],
                                   jobname_suffix=suffix)
 
                     self.run_step(step_name='Bowtie2AlignStep',
                                   sample=sample,
                                   cmd_line_args=[sample, suffix, self.bowtie2_dir_path],
-                                  dependency_list=[f"Bowtie2IndexStep.{sample.sample_id}.{suffix}"],
+                                  dependency_list=[f"Bowtie2IndexStep_{sample.sample_id}-{suffix}"],
                                   jobname_suffix=suffix)
 
             # Necessary for both gene and PSI quantification. Do not skip if
@@ -543,7 +543,7 @@ class ExpressionPipeline:
                 self.run_step(step_name='TranscriptGeneQuantificationStep',
                               sample=sample,
                               cmd_line_args=[sample.sample_id, kallisto_quant_path, update_annot_path],
-                              dependency_list=[f"KallistoQuantStep.{sample.sample_id}.{suffix}"])
+                              dependency_list=[f"KallistoQuantStep_{sample.sample_id}-{suffix}"])
 
             if self.sample_optional_inputs[sample.sample_id]['allele_quant'] is None:
                 genome_alignment_path = bam_files[sample.sample_id]
@@ -559,10 +559,10 @@ class ExpressionPipeline:
                               sample=sample,
                               cmd_line_args=[sample.sample_id, genome_alignment_path, update_annot_path_1,
                                              update_annot_path_2, tx_align_path_1, tx_align_path_2],
-                              dependency_list=[f"Bowtie2AlignStep.{sample.sample_id}.1",
-                                               f"Bowtie2AlignStep.{sample.sample_id}.2"])
+                              dependency_list=[f"Bowtie2AlignStep_{sample.sample_id}-1",
+                                               f"Bowtie2AlignStep_{sample.sample_id}-2"])
 
-            seed = seeds[f"MoleculeMakerStep.{sample.sample_id}"]
+            seed = seeds[f"MoleculeMakerStep_{sample.sample_id}"]
             num_molecules_to_generate = sample.molecule_count
             # Use default or user-provided distribution files
             intron_quant_path = self.sample_optional_inputs[sample.sample_id]['intron_quant']
@@ -579,8 +579,8 @@ class ExpressionPipeline:
             # TranscriptomeFastaPreparationStep has completed. This causes an
             # error because the molecule maker needs the transcriptome FASTA
             # produced by this step.
-            dep_list = [f"TranscriptomeFastaPreparationStep.{sample.sample_id}.1",
-                        f"TranscriptomeFastaPreparationStep.{sample.sample_id}.2"]
+            dep_list = [f"TranscriptomeFastaPreparationStep_{sample.sample_id}-1",
+                        f"TranscriptomeFastaPreparationStep_{sample.sample_id}-2"]
             if intron_quant_path is None:
                 intron_quant_path = os.path.join(self.data_directory_path,
                                                  f'sample{sample.sample_id}',
@@ -589,19 +589,19 @@ class ExpressionPipeline:
                 gene_quant_path = os.path.join(self.data_directory_path,
                                                  f'sample{sample.sample_id}',
                                                  CAMPAREE_CONSTANTS.TXQUANT_OUTPUT_GENE_FILENAME)
-                dep_list.append(f"TranscriptGeneQuantificationStep.{sample.sample_id}")
+                dep_list.append(f"TranscriptGeneQuantificationStep_{sample.sample_id}")
             if psi_quant_path is None:
                 psi_quant_path = os.path.join(self.data_directory_path,
                                                  f'sample{sample.sample_id}',
                                                  CAMPAREE_CONSTANTS.TXQUANT_OUTPUT_PSI_FILENAME)
                 # Dependency already added if user did not provide gene quant.
-                if f"TranscriptGeneQuantificationStep.{sample.sample_id}" not in dep_list:
-                    dep_list.append(f"TranscriptGeneQuantificationStep.{sample.sample_id}")
+                if f"TranscriptGeneQuantificationStep_{sample.sample_id}" not in dep_list:
+                    dep_list.append(f"TranscriptGeneQuantificationStep_{sample.sample_id}")
             if allele_quant_path is None:
                 allele_quant_path = os.path.join(self.data_directory_path,
                                                  f'sample{sample.sample_id}',
                                                  CAMPAREE_CONSTANTS.ALLELIC_IMBALANCE_OUTPUT_FILENAME)
-                dep_list.append(f"AllelicImbalanceQuantificationStep.{sample.sample_id}")
+                dep_list.append(f"AllelicImbalanceQuantificationStep_{sample.sample_id}")
 
             # If no molecule count specified for this sample, use the default count.
             if not num_molecules_to_generate or self.override_sample_molecule_count:
@@ -633,7 +633,7 @@ class ExpressionPipeline:
         # Seeds for jobs that are run per sample
         for job in ["VariantsFinderStep", "MoleculeMakerStep"]:
             for sample in self.samples:
-                seeds[f"{job}.{sample.sample_id}"] = numpy.random.randint(MAX_SEED)
+                seeds[f"{job}_{sample.sample_id}"] = numpy.random.randint(MAX_SEED)
         return seeds
 
     def run_step(self, step_name, sample, cmd_line_args, dependency_list=None,
@@ -678,12 +678,12 @@ class ExpressionPipeline:
 
         stdout_log = os.path.join(step_class.log_directory_path,
                                   f"sample{sample.sample_id}" if sample else "",
-                                  f"{step_name}{f'.{jobname_suffix}' if jobname_suffix else ''}.{self.scheduler_mode}.out")
+                                  f"{step_name}{f'-{jobname_suffix}' if jobname_suffix else ''}.{self.scheduler_mode}.out")
         stderr_log = os.path.join(step_class.log_directory_path,
                                   f"sample{sample.sample_id}" if sample else "",
-                                  f"{step_name}{f'.{jobname_suffix}' if jobname_suffix else ''}.{self.scheduler_mode}.err")
-        scheduler_job_name = (f"{step_name}{f'.sample{sample.sample_id}_{sample.sample_name}' if sample else ''}"
-                              f"{f'.{jobname_suffix}' if jobname_suffix else ''}")
+                                  f"{step_name}{f'-{jobname_suffix}' if jobname_suffix else ''}.{self.scheduler_mode}.err")
+        scheduler_job_name = (f"{step_name}{f'_sample{sample.sample_id}_{sample.sample_name}' if sample else ''}"
+                              f"{f'-{jobname_suffix}' if jobname_suffix else ''}")
         scheduler_args = {'job_name' : scheduler_job_name,
                           'stdout_logfile' : stdout_log,
                           'stderr_logfile' : stderr_log,
@@ -695,8 +695,8 @@ class ExpressionPipeline:
         validation_attributes = step_class.get_validation_attributes(*cmd_line_args)
         output_directory = os.path.join(step_class.data_directory_path,
                                         f"sample{sample.sample_id}" if sample else "")
-        self.expression_pipeline_monitor.submit_new_job(job_id=f"{step_name}{f'.{sample.sample_id}' if sample else ''}"
-                                                               f"{f'.{jobname_suffix}' if jobname_suffix else ''}",
+        self.expression_pipeline_monitor.submit_new_job(job_id=f"{step_name}{f'_{sample.sample_id}' if sample else ''}"
+                                                               f"{f'-{jobname_suffix}' if jobname_suffix else ''}",
                                                         job_command=command,
                                                         sample=sample,
                                                         step_name=step_name,
