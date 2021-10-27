@@ -407,8 +407,6 @@ class ExpressionPipeline:
             bam_files[sample.sample_id] = bam_file
             self.run_step(step_name='GenomeAlignmentStep',
                           sample=sample,
-                          execute_args=[sample, self.star_index_directory_path,
-                                        self.star_file_path],
                           cmd_line_args=[sample, self.star_index_directory_path,
                                          self.star_file_path])
 
@@ -416,7 +414,6 @@ class ExpressionPipeline:
             bam_filename = bam_files[sample.sample_id]
             self.run_step(step_name='GenomeBamIndexStep',
                           sample=sample,
-                          execute_args=[sample, bam_filename],
                           cmd_line_args=[sample, bam_filename],
                           dependency_list=[f"GenomeAlignmentStep.{sample.sample_id}"])
 
@@ -425,8 +422,6 @@ class ExpressionPipeline:
             seed = seeds[f"VariantsFinderStep.{sample.sample_id}"]
             self.run_step(step_name='VariantsFinderStep',
                           sample=sample,
-                          execute_args=[sample, bam_filename, self.chr_ploidy_data,
-                                        self.reference_genome, seed],
                           cmd_line_args=[sample, bam_filename, self.chr_ploidy_file_path,
                                          self.reference_genome_file_path, seed],
                           dependency_list=[f"GenomeBamIndexStep.{sample.sample_id}"])
@@ -437,7 +432,6 @@ class ExpressionPipeline:
                 bam_filename = bam_files[sample.sample_id]
                 self.run_step(step_name='IntronQuantificationStep',
                               sample=sample,
-                              execute_args=[bam_filename, output_directory, self.annotation_file_path],
                               cmd_line_args=[bam_filename, output_directory, self.annotation_file_path],
                               dependency_list=[f"GenomeBamIndexStep.{sample.sample_id}"])
             #TODO: do we need to depend upon the index being done? or just the alignment?
@@ -447,8 +441,6 @@ class ExpressionPipeline:
         seed = seeds["VariantsCompilationStep"]
         self.run_step(step_name='VariantsCompilationStep',
                       sample=None,
-                      execute_args=[[sample.sample_id for sample in self.samples],
-                                    self.chr_ploidy_data, self.reference_genome, seed],
                       cmd_line_args=[[sample.sample_id for sample in self.samples],
                                      self.chr_ploidy_file_path,
                                      self.reference_genome_file_path, seed],
@@ -460,7 +452,6 @@ class ExpressionPipeline:
             seed = seeds["BeagleStep"]
             self.run_step(step_name='BeagleStep',
                           sample=None,
-                          execute_args=[self.beagle_file_path, seed],
                           cmd_line_args=[self.beagle_file_path, seed],
                           dependency_list=[f"VariantsCompilationStep"])
 
@@ -479,8 +470,6 @@ class ExpressionPipeline:
                 dep_list = [f"BeagleStep"]
             self.run_step(step_name='GenomeBuilderStep',
                           sample=sample,
-                          execute_args=[sample, phased_vcf_file, self.chr_ploidy_data,
-                                        self.reference_genome],
                           cmd_line_args=[sample, phased_vcf_file, self.chr_ploidy_file_path,
                                          self.reference_genome_file_path],
                           dependency_list=dep_list)
@@ -488,8 +477,6 @@ class ExpressionPipeline:
             for suffix in [1, 2]:
                 self.run_step(step_name='UpdateAnnotationForGenomeStep',
                               sample=sample,
-                              execute_args=[sample, suffix, self.annotation_file_path,
-                                            self.chr_ploidy_file_path],
                               cmd_line_args=[sample, suffix, self.annotation_file_path,
                                              self.chr_ploidy_file_path],
                               dependency_list=[f"GenomeBuilderStep.{sample.sample_id}"],
@@ -501,8 +488,6 @@ class ExpressionPipeline:
                                                     CAMPAREE_CONSTANTS.GENOMEBUILDER_SEQUENCE_FILENAME_PATTERN.format(genome_name=suffix))
                 self.run_step(step_name='TranscriptomeFastaPreparationStep',
                               sample=sample,
-                              execute_args=[sample.sample_id, suffix, parental_genome_path,
-                                            update_annot_path],
                               cmd_line_args=[sample.sample_id, suffix, parental_genome_path,
                                              update_annot_path],
                               dependency_list=[f"UpdateAnnotationForGenomeStep.{sample.sample_id}.{suffix}"],
@@ -517,8 +502,6 @@ class ExpressionPipeline:
                    self.sample_optional_inputs[sample.sample_id]['psi_quant'] is None:
                     self.run_step(step_name='KallistoIndexStep',
                                   sample=sample,
-                                  execute_args=[sample.sample_id, suffix, self.kallisto_file_path,
-                                                tx_fasta_path],
                                   cmd_line_args=[sample.sample_id, suffix, self.kallisto_file_path,
                                                  tx_fasta_path],
                                   dependency_list=[f"TranscriptomeFastaPreparationStep.{sample.sample_id}.{suffix}"],
@@ -526,7 +509,6 @@ class ExpressionPipeline:
 
                     self.run_step(step_name='KallistoQuantStep',
                                   sample=sample,
-                                  execute_args=[sample, suffix, self.kallisto_file_path],
                                   cmd_line_args=[sample, suffix, self.kallisto_file_path],
                                   dependency_list=[f"KallistoIndexStep.{sample.sample_id}.{suffix}"],
                                   jobname_suffix=suffix)
@@ -535,8 +517,6 @@ class ExpressionPipeline:
                 if self.sample_optional_inputs[sample.sample_id]['allele_quant'] is None:
                     self.run_step(step_name='Bowtie2IndexStep',
                                   sample=sample,
-                                  execute_args=[sample.sample_id, suffix, self.bowtie2_dir_path,
-                                                tx_fasta_path],
                                   cmd_line_args=[sample.sample_id, suffix, self.bowtie2_dir_path,
                                                  tx_fasta_path],
                                   dependency_list=[f"TranscriptomeFastaPreparationStep.{sample.sample_id}.{suffix}"],
@@ -544,7 +524,6 @@ class ExpressionPipeline:
 
                     self.run_step(step_name='Bowtie2AlignStep',
                                   sample=sample,
-                                  execute_args=[sample, suffix, self.bowtie2_dir_path],
                                   cmd_line_args=[sample, suffix, self.bowtie2_dir_path],
                                   dependency_list=[f"Bowtie2IndexStep.{sample.sample_id}.{suffix}"],
                                   jobname_suffix=suffix)
@@ -563,7 +542,6 @@ class ExpressionPipeline:
                                                  CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name=suffix))
                 self.run_step(step_name='TranscriptGeneQuantificationStep',
                               sample=sample,
-                              execute_args=[sample.sample_id, kallisto_quant_path, update_annot_path],
                               cmd_line_args=[sample.sample_id, kallisto_quant_path, update_annot_path],
                               dependency_list=[f"KallistoQuantStep.{sample.sample_id}.{suffix}"])
 
@@ -579,8 +557,6 @@ class ExpressionPipeline:
                                                CAMPAREE_CONSTANTS.BOWTIE2_ALIGN_FILENAME_PATTERN.format(genome_name='2'))
                 self.run_step(step_name='AllelicImbalanceQuantificationStep',
                               sample=sample,
-                              execute_args=[sample.sample_id, genome_alignment_path, update_annot_path_1,
-                                            update_annot_path_2, tx_align_path_1, tx_align_path_2],
                               cmd_line_args=[sample.sample_id, genome_alignment_path, update_annot_path_1,
                                              update_annot_path_2, tx_align_path_1, tx_align_path_2],
                               dependency_list=[f"Bowtie2AlignStep.{sample.sample_id}.1",
@@ -632,9 +608,6 @@ class ExpressionPipeline:
                 num_molecules_to_generate = self.default_molecule_count
             self.run_step(step_name='MoleculeMakerStep',
                           sample=sample,
-                          execute_args=[sample, intron_quant_path, gene_quant_path,
-                                        psi_quant_path, allele_quant_path,
-                                        self.output_type, num_molecules_to_generate, seed],
                           cmd_line_args=[sample, intron_quant_path, gene_quant_path,
                                          psi_quant_path, allele_quant_path,
                                          self.output_type, num_molecules_to_generate, seed],
@@ -663,7 +636,7 @@ class ExpressionPipeline:
                 seeds[f"{job}.{sample.sample_id}"] = numpy.random.randint(MAX_SEED)
         return seeds
 
-    def run_step(self, step_name, sample, execute_args, cmd_line_args, dependency_list=None,
+    def run_step(self, step_name, sample, cmd_line_args, dependency_list=None,
                  jobname_suffix=None):
         """
         Helper function that runs the given step, with the given parameters. It
@@ -677,9 +650,6 @@ class ExpressionPipeline:
         sample : Sample
             Sample to run through the step. For steps that aren't associated with
             specific samples, set this to None.
-        execute_args : list
-            List of positional paramteres to pass to the execute() method for the
-            given step.
         cmd_line_args : list
             List of positional parameters to pass to the get_commandline_call()
             method for the given step.
