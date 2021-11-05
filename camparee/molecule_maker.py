@@ -386,11 +386,17 @@ class MoleculeMakerStep(AbstractCampareeStep):
         molecules = []
         for i in range(N):
             sequence, start, cigar, strand, ref_start, ref_cigar, chrom, transcript_id = self.make_molecule()
-            # TODO: use ref_start, ref_cigar when making Molecules
-            #       this requires that the Molecule class include these cigar strings
-            mol = Molecule(Molecule.new_id(), sequence, start=1, cigar=f"{len(sequence)}M",
-                                source_start=start, source_cigar=cigar, source_strand=strand,
-                                transcript_id=transcript_id)
+            mol = Molecule(
+                    Molecule.new_id(transcript_id),
+                    sequence,
+                    start=1,
+                    cigar=f"{len(sequence)}M",
+                    strand = "+",
+                    source_start=ref_start,
+                    source_cigar=ref_cigar,
+                    source_strand=strand,
+                    transcript_id=transcript_id,
+                    source_chrom = chrom)
             molecules.append(mol)
         return MoleculePacket(id, sample, molecules)
 
