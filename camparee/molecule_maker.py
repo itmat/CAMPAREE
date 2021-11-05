@@ -389,13 +389,13 @@ class MoleculeMakerStep(AbstractCampareeStep):
             mol = Molecule(
                     Molecule.new_id(transcript_id),
                     sequence,
-                    start=1,
-                    cigar=f"{len(sequence)}M",
-                    strand = "+",
-                    source_start=ref_start,
-                    source_cigar=ref_cigar,
-                    source_strand=strand,
-                    transcript_id=transcript_id,
+                    start = start, # relative to the true ('parental') genome
+                    cigar = cigar,
+                    strand = strand,
+                    source_start = ref_start, # relative to the reference genome
+                    source_cigar = ref_cigar,
+                    source_strand = strand,
+                    transcript_id = transcript_id,
                     source_chrom = chrom)
             molecules.append(mol)
         return MoleculePacket(id, sample, molecules)
