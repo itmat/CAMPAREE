@@ -292,7 +292,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
                         + self.get_reference_cigar(starts[-1], ends[-1], chrom, allele_number)
         ref_start = self.convert_genome_position_to_reference(starts[0], chrom, allele_number)
 
-        transcript_id = f"{transcript}_{allele_number}{'_pre_mRNA' if pre_mRNA else ''}"
+        transcript_id = f"{sample_id}_{transcript}_{allele_number}{'_pre_mRNA' if pre_mRNA else ''}"
 
 
         # Build the actual sequence
@@ -546,7 +546,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
                 for i in range(1,num_packets+1):
                     print(f"    Generating packet {i} of {num_packets}")
                     log_file.write(f"    Generating packet {i} of {num_packets}\n")
-                    packet = self.make_packet(sample=sample, id=f"sample{sample.sample_id}.{i}")
+                    packet = self.make_packet(sample=sample, id=f"sample{sample.sample_id}.{i}") #TODO: id needs to be an integer
 
                     molecule_packet_filename = os.path.join(sample_data_directory,
                                                             self.OUTPUT_FILENAME_PATTERN.format(output_type=output_type,
