@@ -412,8 +412,6 @@ class MoleculeMakerStep(AbstractCampareeStep):
             molecule_file.write(header)
             for i in range(N):
                 sequence, start, cigar, ref_start, ref_cigar, strand, chrom, transcript_id = self.make_molecule()
-                # NOTE: Not outputing the molecules start or cigar string since those are relative to parent
-                #       which in this case is always trivial (start=1, cigar=###M) since the molecule is new
                 line = "\t".join([transcript_id,
                                   chrom,
                                   str(start),
