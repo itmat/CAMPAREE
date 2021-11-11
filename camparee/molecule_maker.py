@@ -247,7 +247,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
                 allelic_quant[gene] = (allele1, allele2)
         return allelic_quant
 
-    def make_molecule(self):
+    def make_molecule(self, sample):
         # Pick random gene
         gene_index = numpy.random.choice(len(self.genes), p=self.gene_probabilities)
         gene = self.genes[gene_index]
@@ -292,7 +292,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
                         + self.get_reference_cigar(starts[-1], ends[-1], chrom, allele_number)
         ref_start = self.convert_genome_position_to_reference(starts[0], chrom, allele_number)
 
-        transcript_id = f"{sample_id}_{transcript}_{allele_number}{'_pre_mRNA' if pre_mRNA else ''}"
+        transcript_id = f"{sample.sample_id}_{transcript}_{allele_number}{'_pre_mRNA' if pre_mRNA else ''}"
 
 
         # Build the actual sequence
@@ -385,7 +385,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
     def make_packet(self, sample, id="packet0", N=10_000):
         molecules = []
         for i in range(N):
-            sequence, start, cigar, strand, ref_start, ref_cigar, chrom, transcript_id = self.make_molecule()
+            sequence, start, cigar, strand, ref_start, ref_cigar, chrom, transcript_id = self.make_molecule(sample)
             mol = Molecule(
                     Molecule.new_id(transcript_id),
                     sequence,
@@ -400,7 +400,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
             molecules.append(mol)
         return MoleculePacket(id, sample, molecules)
 
-    def make_molecule_file(self, filepath, N=10_000):
+    def make_molecule_file(self, filepath, sample, N=10_000):
         """
         Write out molecules to a tab-separated file
 
@@ -411,7 +411,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
             header = "#transcript_id\tchrom\tstart\tcigar\tref_start\tref_cigar\tstrand\tsequence\n"
             molecule_file.write(header)
             for i in range(N):
-                sequence, start, cigar, ref_start, ref_cigar, strand, chrom, transcript_id = self.make_molecule()
+                sequence, start, cigar, ref_start, ref_cigar, strand, chrom, transcript_id = self.make_molecule(sample)
                 line = "\t".join([transcript_id,
                                   chrom,
                                   str(start),
@@ -560,7 +560,8 @@ class MoleculeMakerStep(AbstractCampareeStep):
                                                                                             packet_num="",
                                                                                             extension=output_file_extension))
                 self.make_molecule_file(filepath=molecule_output_filename,
-                                        N = output_molecule_count)
+                                        N = output_molecule_count,
+                                        sample = sample)
 
             log_file.write("\nALL DONE!\n")
 
