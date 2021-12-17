@@ -1,6 +1,7 @@
 import sys
 import os
 import importlib
+import shutil
 import inspect
 import numpy
 
@@ -588,11 +589,14 @@ class ExpressionPipeline:
 
             seed = seeds[f"MoleculeMakerStep.{sample.sample_id}"]
             num_molecules_to_generate = sample.molecule_count
+
+            sample_data_directory = os.path.join(self.data_directory_path, f'sample{sample.sample_id}')
+
             # Use default or user-provided distribution files
-            intron_quant_path = self.sample_optional_inputs[sample.sample_id]['intron_quant']
-            gene_quant_path = self.sample_optional_inputs[sample.sample_id]['gene_quant']
-            psi_quant_path = self.sample_optional_inputs[sample.sample_id]['psi_quant']
-            allele_quant_path = self.sample_optional_inputs[sample.sample_id]['allele_quant']
+            user_intron_quant_path = self.sample_optional_inputs[sample.sample_id]['intron_quant']
+            user_gene_quant_path = self.sample_optional_inputs[sample.sample_id]['gene_quant']
+            user_psi_quant_path = self.sample_optional_inputs[sample.sample_id]['psi_quant']
+            user_allele_quant_path = self.sample_optional_inputs[sample.sample_id]['allele_quant']
             # These dependencies are only necessary if user provides optional
             # input for gene_quants, psi_quants, *and* allele_quants. This would
             # cause CAMPAREE to skip the steps used to generate those files. These
@@ -605,38 +609,40 @@ class ExpressionPipeline:
             # produced by this step.
             dep_list = [f"TranscriptomeFastaPreparationStep.{sample.sample_id}.1",
                         f"TranscriptomeFastaPreparationStep.{sample.sample_id}.2"]
-            if intron_quant_path is None:
-                intron_quant_path = os.path.join(self.data_directory_path,
-                                                 f'sample{sample.sample_id}',
-                                                 CAMPAREE_CONSTANTS.INTRON_OUTPUT_FILENAME)
-            if gene_quant_path is None:
-                gene_quant_path = os.path.join(self.data_directory_path,
-                                                 f'sample{sample.sample_id}',
-                                                 CAMPAREE_CONSTANTS.TXQUANT_OUTPUT_GENE_FILENAME)
+
+            intron_quant_path = os.path.join(sample_data_directory, CAMPAREE_CONSTANTS.INTRON_OUTPUT_FILENAME)
+            if user_intron_quant_path is not None:
+                shutil.copy(user_intron_quant_path, intron_quant_path)
+                # TODO: if user_intron_quant_path is None, don't we need to add a dependency?
+
+            gene_quant_path = os.path.join(sample_data_directory, CAMPAREE_CONSTANTS.TXQUANT_OUTPUT_GENE_FILENAME)
+            if user_gene_quant_path is None:
                 dep_list.append(f"TranscriptGeneQuantificationStep.{sample.sample_id}")
-            if psi_quant_path is None:
-                psi_quant_path = os.path.join(self.data_directory_path,
-                                                 f'sample{sample.sample_id}',
-                                                 CAMPAREE_CONSTANTS.TXQUANT_OUTPUT_PSI_FILENAME)
+            else:
+                shutil.copy(user_gene_quant_path, gene_quant_path)
+
+            psi_quant_path = os.path.join(sample_data_directory, CAMPAREE_CONSTANTS.TXQUANT_OUTPUT_PSI_FILENAME)
+            if user_psi_quant_path is None:
                 # Dependency already added if user did not provide gene quant.
                 if f"TranscriptGeneQuantificationStep.{sample.sample_id}" not in dep_list:
                     dep_list.append(f"TranscriptGeneQuantificationStep.{sample.sample_id}")
-            if allele_quant_path is None:
-                allele_quant_path = os.path.join(self.data_directory_path,
-                                                 f'sample{sample.sample_id}',
-                                                 CAMPAREE_CONSTANTS.ALLELIC_IMBALANCE_OUTPUT_FILENAME)
+            else:
+                shutil.copy(user_psi_quant_path, psi_quant_path)
+
+            allele_quant_path = os.path.join(sample_data_directory, CAMPAREE_CONSTANTS.ALLELIC_IMBALANCE_OUTPUT_FILENAME)
+            if user_allele_quant_path is None:
                 dep_list.append(f"AllelicImbalanceQuantificationStep.{sample.sample_id}")
+            else:
+                shutil.copy(user_allele_quant_path, allele_quant_path)
 
             # If no molecule count specified for this sample, use the default count.
             if not num_molecules_to_generate or self.override_sample_molecule_count:
                 num_molecules_to_generate = self.default_molecule_count
             self.run_step(step_name='MoleculeMakerStep',
                           sample=sample,
-                          execute_args=[sample, intron_quant_path, gene_quant_path,
-                                        psi_quant_path, allele_quant_path,
+                          execute_args=[sample, sample_data_directory,
                                         self.output_type, num_molecules_to_generate, seed],
-                          cmd_line_args=[sample, intron_quant_path, gene_quant_path,
-                                         psi_quant_path, allele_quant_path,
+                          cmd_line_args=[sample,  sample_data_directory,
                                          self.output_type, num_molecules_to_generate, seed],
                           dependency_list=dep_list)
 

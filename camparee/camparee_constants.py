@@ -143,7 +143,7 @@ CAMPAREE_CONSTANTS = \
                       # Dictionary mapping the options for molecule output type, to the
                       # extension of the output file. Note: the keys are used to validate
                       # the output type entered in the config file.
-                      MOLECULE_MAKER_OUTPUT_OPTIONS_W_EXTENSIONS={"file": "txt", "packet": "pickle"},
+                      MOLECULE_MAKER_OUTPUT_OPTIONS_W_EXTENSIONS={"file": "txt", "packet": "pickle", "generator": ''},
                       # Name of files where molecule representations are stored.
                       MOLECULE_MAKER_OUTPUT_FILENAME_PATTERN='molecule_{output_type}{packet_num}.{extension}',
                       # Default number of molecules to store per molecule packet, if the
