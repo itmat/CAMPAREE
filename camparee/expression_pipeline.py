@@ -89,7 +89,7 @@ class ExpressionPipeline:
                                                       default_num_processors=self.scheduler_default_params['default_num_processors'],
                                                       default_memory_in_mb=self.scheduler_default_params['default_memory_in_mb'])
 
-        # Load instances of each pipeline step into the dictionyar of pipleine
+        # Load instances of each pipeline step into the dictionary of pipline
         # steps tracked by the job monitor.
         for step, props in configuration['steps'].items():
             module_name, step_name = step.rsplit(".")
@@ -110,7 +110,7 @@ class ExpressionPipeline:
         # section of the config file.
         module_name = "molecule_maker"
         step_name = "MoleculeMakerStep"
-        parameters = None
+        parameters = configuration['output']['parameters']
         scheduler_parameters = None
         module = importlib.import_module(f'.{module_name}', package="camparee")
         step_class = getattr(module, step_name)
