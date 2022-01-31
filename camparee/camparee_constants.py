@@ -104,7 +104,7 @@ CAMPAREE_CONSTANTS = \
                       # Name of file where TranscriptomeFastaPreparationStep logging is stored
                       TRANSCRIPTOME_FASTA_LOG_FILENAME_PATTERN='TranscriptomeFastaPreparationStep_{genome_name}.log',
                       # Name of directory to store kallisto index files
-                      KALLISTO_INDEX_DIR_PATTERN='transcriptome_{genome_name}_index',
+                      KALLISTO_INDEX_DIR_PATTERN='transcriptome_{genome_name}_kallisto_index',
                       # String pattern to construct path to kallisto index file
                       KALLISTO_INDEX_FILENAME_PATTERN='transcriptome_{genome_name}.kallisto.index',
                       # Name of file where KallistoIndexStep logging is stored
@@ -123,13 +123,10 @@ CAMPAREE_CONSTANTS = \
                       TXQUANT_OUTPUT_PSI_FILENAME="isoform_psi_value_quantifications.txt",
                       # Name of file where TranscriptGeneQuantificationStep logging is stored
                       TXQUANT_LOG_FILENAME="TranscriptGeneQuantificationStep.log",
-                      # Name of directory to store Bowtie2 index files. Note, right now this
-                      # is the same as kallisto index directory. Maintaining both of these as
-                      # separate variables, so Bowtie2 and kallisto indexes can be stored in
-                      # different directories.
-                      BOWTIE2_INDEX_DIR_PATTERN='transcriptome_{genome_name}_index',
+                      # Name of directory to store Bowtie2 index files.
+                      BOWTIE2_INDEX_DIR_PATTERN='transcriptome_{genome_name}_bowtie2_index',
                       # Prefix used by Bowtie2 when naming/creating all index files
-                      BOWTIE2_INDEX_PREFIX_PATTERN='transcriptome_{genome_name}',
+                      BOWTIE2_INDEX_PREFIX_PATTERN='bowtie2_transcriptome_{genome_name}',
                       # Name of file where Bowtie2IndexStep logging is stored
                       BOWTIE2_INDEX_LOG_FILENAME_PATTERN='Bowtie2IndexStep_{genome_name}.log',
                       # Name of file where Bowtie2 alignment results are stored
@@ -151,6 +148,6 @@ CAMPAREE_CONSTANTS = \
                       MOLECULE_MAKER_DEFAULT_NUM_MOLECULES_PER_PACKET=10_000,
                       # Name of file where MoleculeMakerStep logging is stored
                       MOLECULE_MAKER_LOG_FILENAME="MoleculeMakerStep.log"
-                     )
+                      )
 
 CAMPAREE_VERSION="0.3.0"

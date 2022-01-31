@@ -66,8 +66,7 @@ class KallistoIndexStep(AbstractCampareeStep):
 
         kallisto_index_dir_path = os.path.join(self.data_directory_path, f'sample{sample_id}',
                                                KallistoIndexStep.KALLISTO_INDEX_DIR_PATTERN.format(genome_name=genome_suffix))
-        kallisto_index_file_path = os.path.join(self.data_directory_path, f'sample{sample_id}',
-                                                KallistoIndexStep.KALLISTO_INDEX_DIR_PATTERN.format(genome_name=genome_suffix),
+        kallisto_index_file_path = os.path.join(kallisto_index_dir_path,
                                                 KallistoIndexStep.KALLISTO_INDEX_FILENAME_PATTERN.format(genome_name=genome_suffix))
         log_file_path = os.path.join(self.log_directory_path, f'sample{sample_id}',
                                      KallistoIndexStep.KALLISTO_INDEX_LOG_FILENAME_PATTERN.format(genome_name=genome_suffix))
@@ -75,7 +74,7 @@ class KallistoIndexStep(AbstractCampareeStep):
         with open(log_file_path, 'w') as log_file:
 
             print(f"Building kallisto indexes for transcriptome {genome_suffix} "
-                           f"of sample{sample_id}.")
+                  f"of sample{sample_id}.")
             log_file.write(f"Building kallisto indexes for transcriptome {genome_suffix} "
                            f"of sample{sample_id}.\n")
 
@@ -85,11 +84,8 @@ class KallistoIndexStep(AbstractCampareeStep):
                            f"    kallisto index file: {kallisto_index_file_path}\n"
                            f"    input transcriptome FASTA: {transcriptome_fasta_path}\n")
 
-            log_file.write(f"Create kallisto index directory.\n")
-            if os.path.isdir(kallisto_index_dir_path):
-                log_file.write(f"kallisto index directory already exists.\n")
-            else:
-                os.mkdir(kallisto_index_dir_path)
+            log_file.write("Create kallisto index directory.\n")
+            os.mkdir(kallisto_index_dir_path)
 
             kallisto_command = KallistoIndexStep.BASE_KALLISTO_INDEX_COMMAND.format(kallisto_bin_path=kallisto_bin_path,
                                                                                     kallisto_index_file=kallisto_index_file_path,
@@ -103,7 +99,7 @@ class KallistoIndexStep(AbstractCampareeStep):
             try:
                 kallisto_result = subprocess.run(kallisto_command, shell=True, check=True,
                                                  stdout=subprocess.PIPE,
-                                                 stderr=subprocess.STDOUT, #Redirect stderr to stdout.
+                                                 stderr=subprocess.STDOUT, # Redirect stderr to stdout.
                                                  encoding="ascii")
             except subprocess.CalledProcessError as kallisto_index_exception:
                 log_file.write("\n*****ERROR: kallist index command failed:\n")
@@ -115,9 +111,9 @@ class KallistoIndexStep(AbstractCampareeStep):
                 raise CampareeException(f"\nkallisto index process failed. "
                                         f"For full details see {log_file_path}\n")
 
-            print(f"Finished generating kallisto index.\n")
+            print("Finished generating kallisto index.\n")
             log_file.write(f"{kallisto_result.stdout}\n")
-            log_file.write(f"Finished generating kallisto index.\n")
+            log_file.write("Finished generating kallisto index.\n")
             log_file.write("ALL DONE!\n")
 
     def get_commandline_call(self, sample_id, genome_suffix, kallisto_bin_path, transcriptome_fasta_path):
@@ -338,7 +334,7 @@ class KallistoQuantStep(AbstractCampareeStep):
                            f"    kallisto output directory: {kallisto_output_path}\n"
                            f"    read files: {read_files}\n")
 
-            log_file.write(f"Create kallisto quantification output directory.\n")
+            log_file.write("Create kallisto quantification output directory.\n")
             os.mkdir(kallisto_output_path)
 
             kallisto_command = KallistoQuantStep.BASE_KALLISTO_QUANT_COMMAND.format(kallisto_bin_path=kallisto_bin_path,
@@ -354,7 +350,7 @@ class KallistoQuantStep(AbstractCampareeStep):
             try:
                 kallisto_result = subprocess.run(kallisto_command, shell=True, check=True,
                                                  stdout=subprocess.PIPE,
-                                                 stderr=subprocess.STDOUT, #Redirect stderr to stdout.
+                                                 stderr=subprocess.STDOUT, # Redirect stderr to stdout.
                                                  encoding="ascii")
             except subprocess.CalledProcessError as kallisto_quant_exception:
                 log_file.write("\n*****ERROR: kallist quant command failed:\n")
@@ -366,9 +362,9 @@ class KallistoQuantStep(AbstractCampareeStep):
                 raise CampareeException(f"\nkallisto quant process failed. "
                                         f"For full details see {log_file_path}\n")
 
-            print(f"Finished kallisto quantification.\n")
+            print("Finished kallisto quantification.\n")
             log_file.write(f"{kallisto_result.stdout}\n")
-            log_file.write(f"Finished kallisto quantification.\n")
+            log_file.write("Finished kallisto quantification.\n")
             log_file.write("ALL DONE!\n")
 
     def get_commandline_call(self, sample, genome_suffix, kallisto_bin_path):
@@ -494,7 +490,7 @@ class KallistoQuantStep(AbstractCampareeStep):
         Entry point into class. Used when script is executed/submitted via the
         command line with the 'quant' subcommand.
         """
-        sample = eval(cmd_args.sample)
+        sample = eval(cmd_args.sample) # Requires Sample function from BEERS_UTILS.sample
         kallisto_quant = KallistoQuantStep(log_directory_path=cmd_args.log_directory_path,
                                            data_directory_path=cmd_args.data_directory_path)
         kallisto_quant.execute(sample=sample,
@@ -536,7 +532,7 @@ if __name__ == '__main__':
 
     #Setup arguments from the quantification subcommand
     kallisto_quant_subparser = subparsers.add_parser('quant', help="Run kallisto transcript-level quantification.",
-                                                   description="Run kallisto transcript-level quantification.")
+                                                     description="Run kallisto transcript-level quantification.")
     #Send arguments for this subcommand to the KallistoQuantStep's main() method.
     kallisto_quant_subparser.set_defaults(func=KallistoQuantStep.main)
     required_named_kallisto_quant_subparser = kallisto_quant_subparser.add_argument_group('Required named arguments')

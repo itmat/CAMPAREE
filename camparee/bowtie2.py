@@ -89,8 +89,7 @@ class Bowtie2IndexStep(AbstractCampareeStep):
         """
         bowtie2_index_dir_path = os.path.join(self.data_directory_path, f'sample{sample_id}',
                                               Bowtie2IndexStep.BOWTIE2_INDEX_DIR_PATTERN.format(genome_name=genome_suffix))
-        bowtie2_index_file_prefix = os.path.join(self.data_directory_path, f'sample{sample_id}',
-                                                 Bowtie2IndexStep.BOWTIE2_INDEX_DIR_PATTERN.format(genome_name=genome_suffix),
+        bowtie2_index_file_prefix = os.path.join(bowtie2_index_dir_path,
                                                  Bowtie2IndexStep.BOWTIE2_INDEX_PREFIX_PATTERN.format(genome_name=genome_suffix))
         log_file_path = os.path.join(self.log_directory_path, f'sample{sample_id}',
                                      Bowtie2IndexStep.BOWTIE2_INDEX_LOG_FILENAME_PATTERN.format(genome_name=genome_suffix))
@@ -109,11 +108,8 @@ class Bowtie2IndexStep(AbstractCampareeStep):
                            f"    Input transcriptome FASTA: {transcriptome_fasta_path}\n"
                            f"    Number of Bowtie2 threads: {self.num_bowtie2_threads}\n")
 
-            log_file.write(f"Create Bowtie2 index directory.\n")
-            if os.path.isdir(bowtie2_index_dir_path):
-                log_file.write(f"Bowtie2 index directory already exists.\n")
-            else:
-                os.mkdir(bowtie2_index_dir_path)
+            log_file.write("Create Bowtie2 index directory.\n")
+            os.mkdir(bowtie2_index_dir_path)
 
             bwt2_cmd_options = ' '.join( f"{key} {value}" for key,value in self.bowtie2_cmd_options.items() )
 
@@ -131,7 +127,7 @@ class Bowtie2IndexStep(AbstractCampareeStep):
             try:
                 bowtie2_result = subprocess.run(bowtie2_command, shell=True, check=True,
                                                 stdout=subprocess.PIPE,
-                                                stderr=subprocess.STDOUT, #Redirect stderr to stdout.
+                                                stderr=subprocess.STDOUT, # Redirect stderr to stdout.
                                                 encoding="ascii")
             except subprocess.CalledProcessError as bowtie2_index_exception:
                 log_file.write("\n*****ERROR: Bowtie2 index command failed:\n")
@@ -143,9 +139,9 @@ class Bowtie2IndexStep(AbstractCampareeStep):
                 raise CampareeException(f"\nBowtie2 index process failed. "
                                         f"For full details see {log_file_path}\n")
 
-            print(f"Finished generating Bowtie2 index.\n")
+            print("Finished generating Bowtie2 index.\n")
             log_file.write(f"{bowtie2_result.stdout}\n")
-            log_file.write(f"\nFinished generating Bowtie2 index.\n")
+            log_file.write("\nFinished generating Bowtie2 index.\n")
             log_file.write("ALL DONE!\n")
 
     def get_commandline_call(self, sample_id, genome_suffix, bowtie2_bin_dir, transcriptome_fasta_path):
@@ -432,7 +428,7 @@ class Bowtie2AlignStep(AbstractCampareeStep):
             try:
                 bowtie2_result = subprocess.run(bowtie2_command, shell=True, check=True,
                                                 stdout=subprocess.PIPE,
-                                                stderr=subprocess.STDOUT, #Redirect stderr to stdout.
+                                                stderr=subprocess.STDOUT, # Redirect stderr to stdout.
                                                 encoding="ascii")
             except subprocess.CalledProcessError as bowtie2_align_exception:
                 log_file.write("\n*****ERROR: Bowtie2 alignment command failed:\n")
@@ -444,9 +440,9 @@ class Bowtie2AlignStep(AbstractCampareeStep):
                 raise CampareeException(f"\nBowtie2 alignment process failed. "
                                         f"For full details see {log_file_path}\n")
 
-            print(f"Finished Bowtie2 alignment.\n")
+            print("Finished Bowtie2 alignment.\n")
             log_file.write(f"{bowtie2_result.stdout}\n")
-            log_file.write(f"\nFinished Bowtie2 alignment.\n")
+            log_file.write("\nFinished Bowtie2 alignment.\n")
             log_file.write("ALL DONE!\n")
 
     def get_commandline_call(self, sample, genome_suffix, bowtie2_bin_dir):
@@ -578,7 +574,7 @@ class Bowtie2AlignStep(AbstractCampareeStep):
         """Entry point into class. Used when script is executed/submitted via
         the command line with the 'align' subcommand.
         """
-        sample = eval(cmd_args.sample)
+        sample = eval(cmd_args.sample) # Requires Sample function from BEERS_UTILS.sample
         parameters = json.loads(cmd_args.bowtie2_parameters)
         parameters['num_bowtie_threads'] = cmd_args.num_bowtie2_threads
         bowtie2_align = Bowtie2AlignStep(log_directory_path=cmd_args.log_directory_path,
@@ -604,7 +600,7 @@ if __name__ == '__main__':
 
     #Setup arguments for the index subcommand
     bowtie2_index_subparser = subparsers.add_parser('index', help="Create Bowtie2 index from transcriptome FASTA.",
-                                                     description="Create Bowtie2 index from transcriptome FASTA.")
+                                                    description="Create Bowtie2 index from transcriptome FASTA.")
     bowtie2_index_subparser.set_defaults(func=Bowtie2IndexStep.main)
     #Send arguments for this subcommand to the Bowtie2IndexStep's main() method.
     required_named_bowtie2_index_subparser = bowtie2_index_subparser.add_argument_group('Required named arguments')
@@ -629,7 +625,7 @@ if __name__ == '__main__':
 
     #Setup arguments from the alignment subcommand
     bowtie2_align_subparser = subparsers.add_parser('align', help="Run Bowtie2 alignment to transcriptome.",
-                                                   description="Run Bowtie2 alignment to transcriptome.")
+                                                    description="Run Bowtie2 alignment to transcriptome.")
     #Send arguments for this subcommand to the Bowtie2AlignStep's main() method.
     bowtie2_align_subparser.set_defaults(func=Bowtie2AlignStep.main)
     required_named_bowtie2_align_subparser = bowtie2_align_subparser.add_argument_group('Required named arguments')

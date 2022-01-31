@@ -27,3 +27,6 @@ resources/baby_genome.mm10/*
 # baby genome.
 test_data/results/*
 !test_data/fastq_files/*.fq.gz
+
+# Ignore document build files
+doc/_build/*
