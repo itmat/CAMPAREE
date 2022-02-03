@@ -83,10 +83,25 @@ class ExpressionPipeline:
                   '\n'.join({f"\t-{key} : {value}" for key, value in self.scheduler_default_params.items()}),
                   file=sys.stderr)
 
+        # Validate job resubmission limit (if provided)
+        # TODO: Update BEERS_UTILS to specify the max_resub_limit as a constant,
+        #       which code here can reference for error output rather than
+        #       using a separate, CAMPAREE-specific default value.
+        self.max_resub_limit = configuration['setup'].get('job_resub_limit', 3)
+        if not isinstance(self.max_resub_limit, int) or self.max_resub_limit < 0:
+            print(f"The given job resubmission limit (job_resub_limit={self.max_resub_limit})",
+                  "is invalid. It must be an integer value >= 0.",
+                  file=sys.stderr)
+            raise CampareeValidationException("There was a problem with the optional job "
+                                              "resubmission limit (job_resub_limit). "
+                                              "Consult the standard error file for details.")
+        print(f"And a maximum job resubmission limit of {self.max_resub_limit}.")
+
         self.expression_pipeline_monitor = JobMonitor(output_directory_path=self.output_directory_path,
                                                       scheduler_name=self.scheduler_mode,
                                                       default_num_processors=self.scheduler_default_params['default_num_processors'],
-                                                      default_memory_in_mb=self.scheduler_default_params['default_memory_in_mb'])
+                                                      default_memory_in_mb=self.scheduler_default_params['default_memory_in_mb'],
+                                                      max_resub_limit=self.max_resub_limit)
 
         # Load instances of each pipeline step into the dictionyar of pipleine
         # steps tracked by the job monitor.
