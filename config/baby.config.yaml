@@ -237,6 +237,15 @@ output:
     # specific molecule count is provided, or if 'override_sample_molecule_count'
     # is set to 'True'.
     default_molecule_count: 50000
+    # [OPTIONAL] When generating molecules, override the default parameters the
+    # scheduler uses to submit jobs. When generating transcipts from larger
+    # genomes and complex transcriptomes, the molecule maker may require more
+    # RAM than the default scheduler parameters. Please note, these values are
+    # ignored when the scheduler_mode is set to "serial".
+    # scheduler_parameters:
+        # For a mammalian-sized genome, 8GB of RAM should be sufficient to
+        # generate molecules, in most cases.
+        # memory_in_mb: 8000
 
 ### Configuration of individual steps in the CAMPAREE pipeline
 # CAMPAREE uses this list to assemble all of its pipeline components. Therefore,

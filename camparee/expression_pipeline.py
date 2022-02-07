@@ -103,7 +103,7 @@ class ExpressionPipeline:
                                                       default_memory_in_mb=self.scheduler_default_params['default_memory_in_mb'],
                                                       max_resub_limit=self.max_resub_limit)
 
-        # Load instances of each pipeline step into the dictionyar of pipleine
+        # Load instances of each pipeline step into the dictionary of pipleine
         # steps tracked by the job monitor.
         for step, props in configuration['steps'].items():
             module_name, step_name = step.rsplit(".")
@@ -125,7 +125,7 @@ class ExpressionPipeline:
         module_name = "molecule_maker"
         step_name = "MoleculeMakerStep"
         parameters = None
-        scheduler_parameters = None
+        scheduler_parameters = configuration["output"]["scheduler_parameters"] if "scheduler_parameters" in configuration["output"] else None
         module = importlib.import_module(f'.{module_name}', package="camparee")
         step_class = getattr(module, step_name)
         self.steps[step_name] = step_class(log_directory_path, data_directory_path, parameters)
