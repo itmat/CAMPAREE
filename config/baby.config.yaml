@@ -43,6 +43,13 @@ setup:
         # commands.
         default_submission_args:
 
+    # [OPTIONAL] The maximum number of times a failed job/step will attempt
+    # to repeat before the entire CAMPAREE run halts. This must be an integer
+    # greater than or equal to 0. A value of 0 for this parameter means
+    # CAMPAREE will not attempt to resubmit failed jobs before halting.
+    # [DEFAULT: 3]
+    # job_resub_limit: 3
+
 ### System locations for genome annotation resources used by CAMPAREE
 # See www.smartURLdescribingEverything.com for detailed information
 # about the organization of the CAMPAREE resources directory.

@@ -85,7 +85,10 @@ class KallistoIndexStep(AbstractCampareeStep):
                            f"    input transcriptome FASTA: {transcriptome_fasta_path}\n")
 
             log_file.write("Create kallisto index directory.\n")
-            os.mkdir(kallisto_index_dir_path)
+            if os.path.isdir(kallisto_index_dir_path):
+                log_file.write("kallisto index directory already exists.\n")
+            else:
+                os.mkdir(kallisto_index_dir_path)
 
             kallisto_command = KallistoIndexStep.BASE_KALLISTO_INDEX_COMMAND.format(kallisto_bin_path=kallisto_bin_path,
                                                                                     kallisto_index_file=kallisto_index_file_path,

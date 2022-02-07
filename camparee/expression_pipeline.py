@@ -4,7 +4,7 @@ import importlib
 import inspect
 import numpy
 
-from beers_utils.constants import CONSTANTS,SUPPORTED_SCHEDULER_MODES,MAX_SEED
+from beers_utils.constants import CONSTANTS,MAX_SEED
 from camparee.camparee_constants import CAMPAREE_CONSTANTS
 from beers_utils.job_monitor import JobMonitor
 from camparee.camparee_utils import CampareeUtils, CampareeException
@@ -83,10 +83,25 @@ class ExpressionPipeline:
                   '\n'.join({f"\t-{key} : {value}" for key, value in self.scheduler_default_params.items()}),
                   file=sys.stderr)
 
+        # Validate job resubmission limit (if provided)
+        # TODO: Update BEERS_UTILS to specify the max_resub_limit as a constant,
+        #       which code here can reference for error output rather than
+        #       using a separate, CAMPAREE-specific default value.
+        self.max_resub_limit = configuration['setup'].get('job_resub_limit', 3)
+        if not isinstance(self.max_resub_limit, int) or self.max_resub_limit < 0:
+            print(f"The given job resubmission limit (job_resub_limit={self.max_resub_limit})",
+                  "is invalid. It must be an integer value >= 0.",
+                  file=sys.stderr)
+            raise CampareeValidationException("There was a problem with the optional job "
+                                              "resubmission limit (job_resub_limit). "
+                                              "Consult the standard error file for details.")
+        print(f"And a maximum job resubmission limit of {self.max_resub_limit}.")
+
         self.expression_pipeline_monitor = JobMonitor(output_directory_path=self.output_directory_path,
                                                       scheduler_name=self.scheduler_mode,
                                                       default_num_processors=self.scheduler_default_params['default_num_processors'],
-                                                      default_memory_in_mb=self.scheduler_default_params['default_memory_in_mb'])
+                                                      default_memory_in_mb=self.scheduler_default_params['default_memory_in_mb'],
+                                                      max_resub_limit=self.max_resub_limit)
 
         # Load instances of each pipeline step into the dictionyar of pipleine
         # steps tracked by the job monitor.
@@ -134,9 +149,7 @@ class ExpressionPipeline:
 
         # Insure that all required resources keys are in place.  No point in continuing until this
         # problem is resolved.
-        missing_output_keys = [item
-                                 for item in ExpressionPipeline.REQUIRED_OUTPUT_MAPPINGS
-                                 if item not in output]
+        missing_output_keys = [item for item in ExpressionPipeline.REQUIRED_OUTPUT_MAPPINGS if item not in output]
         if missing_output_keys:
             print(f"The following required mappings were not found under 'outputs': "
                   f"{(',').join(missing_output_keys)}", file=sys.stderr)
@@ -144,7 +157,7 @@ class ExpressionPipeline:
 
         # Insure type mapping exists
         if "type" not in output:
-            print(f"The required mapping 'type' was not found under 'output.", file=sys.stderr)
+            print("The required mapping 'type' was not found under 'output.", file=sys.stderr)
             valid = False
         else:
             self.output_type = output["type"]
@@ -152,7 +165,7 @@ class ExpressionPipeline:
         # Insure default_molecule_count exists and is an int
         # TODO: is this redundant given the check performed with missing_output_keys above?
         if "default_molecule_count" not in output:
-            print(f"The required mapping 'default_molecule_count' was not found under 'output.", file=sys.stderr)
+            print("The required mapping 'default_molecule_count' was not found under 'output.", file=sys.stderr)
             valid = False
         else:
             self.default_molecule_count = output["default_molecule_count"]
@@ -301,11 +314,11 @@ class ExpressionPipeline:
         self.star_file_path = os.path.join(ExpressionPipeline.THIRD_PARTY_SOFTWARE_DIR_PATH, star_filename)
 
         kallisto_filename = [filename for filename in os.listdir(ExpressionPipeline.THIRD_PARTY_SOFTWARE_DIR_PATH)
-                              if "kallisto" in filename][0]
+                             if "kallisto" in filename][0]
         self.kallisto_file_path = os.path.join(ExpressionPipeline.THIRD_PARTY_SOFTWARE_DIR_PATH, kallisto_filename)
 
         bowtie2_dir_name = [filename for filename in os.listdir(ExpressionPipeline.THIRD_PARTY_SOFTWARE_DIR_PATH)
-                             if "bowtie2" in filename][0]
+                            if "bowtie2" in filename][0]
         self.bowtie2_dir_path = os.path.join(ExpressionPipeline.THIRD_PARTY_SOFTWARE_DIR_PATH, bowtie2_dir_name)
 
     def validate_and_set_resources(self, resources):
@@ -344,9 +357,9 @@ class ExpressionPipeline:
         # resolved.
         species_model_directory_path = os.path.join(resources_directory_path, resources['species_model'])
         if not(os.path.exists(species_model_directory_path) and os.path.isdir(species_model_directory_path)):
-                print(f"The species model directory, {species_model_directory_path}, must exist as a directory",
-                      file=sys.stderr)
-                return False
+            print(f"The species model directory, {species_model_directory_path}, must exist as a directory",
+                  file=sys.stderr)
+            return False
 
         # Insure that the reference genome file path exists and points to a file.
         self.reference_genome_file_path = os.path.join(species_model_directory_path, resources['reference_genome_filename'])
@@ -453,7 +466,7 @@ class ExpressionPipeline:
             self.run_step(step_name='BeagleStep',
                           sample=None,
                           cmd_line_args=[self.beagle_file_path, seed],
-                          dependency_list=[f"VariantsCompilationStep"])
+                          dependency_list=["VariantsCompilationStep"])
 
         #TODO: We could load all of the steps in the entire pipeline into the queue
         #      and then just have the queue keep running until everything finishes.
@@ -466,8 +479,8 @@ class ExpressionPipeline:
             dep_list = None
             if phased_vcf_file is None:
                 phased_vcf_file = os.path.join(self.data_directory_path,
-                                                          CAMPAREE_CONSTANTS.BEAGLE_OUTPUT_FILENAME)
-                dep_list = [f"BeagleStep"]
+                                               CAMPAREE_CONSTANTS.BEAGLE_OUTPUT_FILENAME)
+                dep_list = ["BeagleStep"]
             self.run_step(step_name='GenomeBuilderStep',
                           sample=sample,
                           cmd_line_args=[sample, phased_vcf_file, self.chr_ploidy_file_path,
@@ -592,8 +605,8 @@ class ExpressionPipeline:
                 dep_list.append(f"TranscriptGeneQuantificationStep_{sample.sample_id}")
             if psi_quant_path is None:
                 psi_quant_path = os.path.join(self.data_directory_path,
-                                                 f'sample{sample.sample_id}',
-                                                 CAMPAREE_CONSTANTS.TXQUANT_OUTPUT_PSI_FILENAME)
+                                              f'sample{sample.sample_id}',
+                                              CAMPAREE_CONSTANTS.TXQUANT_OUTPUT_PSI_FILENAME)
                 # Dependency already added if user did not provide gene quant.
                 if f"TranscriptGeneQuantificationStep_{sample.sample_id}" not in dep_list:
                     dep_list.append(f"TranscriptGeneQuantificationStep_{sample.sample_id}")

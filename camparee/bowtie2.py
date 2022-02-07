@@ -109,7 +109,10 @@ class Bowtie2IndexStep(AbstractCampareeStep):
                            f"    Number of Bowtie2 threads: {self.num_bowtie2_threads}\n")
 
             log_file.write("Create Bowtie2 index directory.\n")
-            os.mkdir(bowtie2_index_dir_path)
+            if os.path.isdir(bowtie2_index_dir_path):
+                log_file.write("Bowtie2 index directory already exists.\n")
+            else:
+                os.mkdir(bowtie2_index_dir_path)
 
             bwt2_cmd_options = ' '.join( f"{key} {value}" for key,value in self.bowtie2_cmd_options.items() )
 
