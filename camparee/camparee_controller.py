@@ -63,7 +63,7 @@ class CampareeController:
             scheduler_mode = args.scheduler_mode
         if scheduler_mode not in SUPPORTED_SCHEDULER_MODES:
             raise CampareeValidationException(f'{scheduler_mode} is not a supported mode.\n'
-                                              'Please select one of {",".join(SUPPORTED_SCHEDULER_MODES)}.\n')
+                                              f'Please select one of {",".join(SUPPORTED_SCHEDULER_MODES)}.\n')
         self.assemble_input_samples()
         ExpressionPipeline.main(self.configuration, scheduler_mode,
                                 os.path.join(self.output_directory_path,stage_name),

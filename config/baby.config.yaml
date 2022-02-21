@@ -23,9 +23,9 @@ setup:
 
     # The method used to submit jobs for processing. If specified on command
     # line with the "-m" argument, it will override the value here. Currently
-    # supports "serial" (single-core), "lsf" (distributed LSF system) and "sge"
-    # (distributed SGE system). Case-sensitive. Other modes may be added in
-    # later releases.
+    # supports "serial" (single-core), "lsf" (distributed LSF system), "sge"
+    # (distributed SGE system), and "batch" (AWS batch). Case-sensitive.
+    # Other modes may be added in later releases.
     scheduler_mode: serial
 
     # [OPTIONAL] Specify the number of processors and the amount of RAM (in Mb)
@@ -237,6 +237,15 @@ output:
     # specific molecule count is provided, or if 'override_sample_molecule_count'
     # is set to 'True'.
     default_molecule_count: 50000
+    # [OPTIONAL] When generating molecules, override the default parameters the
+    # scheduler uses to submit jobs. When generating transcipts from larger
+    # genomes and complex transcriptomes, the molecule maker may require more
+    # RAM than the default scheduler parameters. Please note, these values are
+    # ignored when the scheduler_mode is set to "serial".
+    # scheduler_parameters:
+        # For a mammalian-sized genome, 8GB of RAM should be sufficient to
+        # generate molecules, in most cases.
+        # memory_in_mb: 8000
 
 ### Configuration of individual steps in the CAMPAREE pipeline
 # CAMPAREE uses this list to assemble all of its pipeline components. Therefore,
