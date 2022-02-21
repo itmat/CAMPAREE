@@ -237,6 +237,13 @@ output:
     # specific molecule count is provided, or if 'override_sample_molecule_count'
     # is set to 'True'.
     default_molecule_count: 50000
+    # Parameters that control the generated molecules
+    parameters:
+        # Determine the min and max length of a polyA tail to
+        # add to the created molecules. Length is chosen uniformly
+        # between the two values.
+        min_polyA_tail_length: 50
+        max_polyA_tail_length: 250
     # [OPTIONAL] When generating molecules, override the default parameters the
     # scheduler uses to submit jobs. When generating transcipts from larger
     # genomes and complex transcriptomes, the molecule maker may require more
@@ -246,6 +253,8 @@ output:
         # For a mammalian-sized genome, 8GB of RAM should be sufficient to
         # generate molecules, in most cases.
         # memory_in_mb: 8000
+    
+
 
 ### Configuration of individual steps in the CAMPAREE pipeline
 # CAMPAREE uses this list to assemble all of its pipeline components. Therefore,

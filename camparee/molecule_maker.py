@@ -1,4 +1,6 @@
 import os
+import json
+import pathlib
 import sys
 import collections
 import argparse
@@ -33,13 +35,11 @@ class MoleculeMakerStep(AbstractCampareeStep):
     _PARENTAL_GENOME_FASTA_FILENAME_PATTERN=CAMPAREE_CONSTANTS.GENOMEBUILDER_SEQUENCE_FILENAME_PATTERN
     _PARENTAL_GENOME_INDEL_FILENAME_PATTERN=CAMPAREE_CONSTANTS.GENOMEBUILDER_INDEL_FILENAME_PATTERN
 
-    def __init__(self, log_directory_path, data_directory_path, parameters=None):
+    def __init__(self, log_directory_path, data_directory_path=None, parameters=None):
         """Constructor for MoleculeMakerStep object.
 
         Parameters
         ----------
-        data_directory_path: string
-            Full path to data directory
         log_directory_path : string
             Full path to log directory.
         parameters : dict
@@ -48,13 +48,22 @@ class MoleculeMakerStep(AbstractCampareeStep):
             with all other CAMPAREE steps.
 
         """
-        self.data_directory_path = data_directory_path
         self.log_directory_path = log_directory_path
+        self.data_directory_path = data_directory_path
+        self.min_polyA_tail_length = parameters["min_polyA_tail_length"]
+        self.max_polyA_tail_length = parameters["max_polyA_tail_length"]
+        self.parameters = parameters
 
     # Nearly all of the validation for this step is already performed in the
     # expression_pipeline, since the output options in the config file are
     # specified outside of the standard 'steps' framework.
     def validate(self):
+        if (self.min_polyA_tail_length < 0):
+            return False
+        if (self.min_polyA_tail_length > self.max_polyA_tail_length):
+            return False
+        if (self.max_polyA_tail_length < 0):
+            return False
         return True
 
     def load_annotation(self, file_path):
@@ -247,7 +256,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
                 allelic_quant[gene] = (allele1, allele2)
         return allelic_quant
 
-    def make_molecule(self):
+    def make_molecule(self, sample):
         # Pick random gene
         gene_index = numpy.random.choice(len(self.genes), p=self.gene_probabilities)
         gene = self.genes[gene_index]
@@ -292,7 +301,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
                         + self.get_reference_cigar(starts[-1], ends[-1], chrom, allele_number)
         ref_start = self.convert_genome_position_to_reference(starts[0], chrom, allele_number)
 
-        transcript_id = f"{transcript}_{allele_number}{'_pre_mRNA' if pre_mRNA else ''}"
+        transcript_id = f"{sample.sample_id}_{transcript}_{allele_number}{'_pre_mRNA' if pre_mRNA else ''}"
 
 
         # Build the actual sequence
@@ -310,14 +319,15 @@ class MoleculeMakerStep(AbstractCampareeStep):
         if polyA_tail:
             # TODO: polyA tails should vary in length
             # Add polyA tail to 3' end
-            sequence = sequence + "A"*200
+            polyA_length = numpy.random.randint(self.min_polyA_tail_length, self.max_polyA_tail_length + 1)
+            sequence = sequence + "A"*polyA_length
             # Soft-clip the polyA tail at the end since it shouldn't align
             if strand == "+":
-                cigar = cigar + "200S"
-                ref_cigar = ref_cigar + "200S"
+                cigar = cigar + f"{polyA_length}S"
+                ref_cigar = ref_cigar + f"{polyA_length}S"
             else:
-                cigar = "200S" + cigar # Relative to + strand, the A's are going on the 5' end
-                ref_cigar = "200S" + ref_cigar
+                cigar =   f"{polyA_length}S" + cigar # Relative to + strand, the A's are going on the 5' end
+                ref_cigar = f"{polyA_length}S" + ref_cigar
 
 
         return sequence, starts[0], cigar, ref_start, ref_cigar, strand, chrom, transcript_id
@@ -385,16 +395,22 @@ class MoleculeMakerStep(AbstractCampareeStep):
     def make_packet(self, sample, id="packet0", N=10_000):
         molecules = []
         for i in range(N):
-            sequence, start, cigar, strand, ref_start, ref_cigar, chrom, transcript_id = self.make_molecule()
-            # TODO: use ref_start, ref_cigar when making Molecules
-            #       this requires that the Molecule class include these cigar strings
-            mol = Molecule(Molecule.new_id(), sequence, start=1, cigar=f"{len(sequence)}M",
-                                source_start=start, source_cigar=cigar, source_strand=strand,
-                                transcript_id=transcript_id)
+            sequence, start, cigar, ref_start, ref_cigar, strand, chrom, transcript_id = self.make_molecule(sample)
+            mol = Molecule(
+                    Molecule.new_id(transcript_id),
+                    sequence,
+                    start = start, # relative to the true ('parental') genome
+                    cigar = cigar,
+                    strand = strand,
+                    source_start = ref_start, # relative to the reference genome
+                    source_cigar = ref_cigar,
+                    source_strand = strand,
+                    transcript_id = transcript_id,
+                    source_chrom = chrom)
             molecules.append(mol)
         return MoleculePacket(id, sample, molecules)
 
-    def make_molecule_file(self, filepath, N=10_000):
+    def make_molecule_file(self, filepath, sample, N=10_000):
         """
         Write out molecules to a tab-separated file
 
@@ -405,9 +421,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
             header = "#transcript_id\tchrom\tstart\tcigar\tref_start\tref_cigar\tstrand\tsequence\n"
             molecule_file.write(header)
             for i in range(N):
-                sequence, start, cigar, ref_start, ref_cigar, strand, chrom, transcript_id = self.make_molecule()
-                # NOTE: Not outputing the molecules start or cigar string since those are relative to parent
-                #       which in this case is always trivial (start=1, cigar=###M) since the molecule is new
+                sequence, start, cigar, ref_start, ref_cigar, strand, chrom, transcript_id = self.make_molecule(sample)
                 line = "\t".join([transcript_id,
                                   chrom,
                                   str(start),
@@ -420,8 +434,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
 
                 molecule_file.write(line)
 
-    def execute(self, sample, intron_quant_path, gene_quant_path, psi_quant_path,
-                allele_quant_path, output_type, output_molecule_count, seed=None,
+    def execute(self, sample, sample_data_directory, output_type, output_molecule_count, seed=None,
                 molecules_per_packet=None):
         """This is the main method that generates simulated molecules and saves/
         exports them in the desired format. It uses the gene, transcript, intron,
@@ -434,8 +447,8 @@ class MoleculeMakerStep(AbstractCampareeStep):
             Sample object corresponding to the input distributions. When exporting
             molecule packets, this Sample object is used to instantiate the
             MoleculePacket object.
-        intron_quant_path : string
-            Path to file containing intron expression distributions.
+        sample_data_directory : string
+            Path to directory containing the data for the sample.
         gene_quant_path : string
             Path to file containing gene expression distributions.
         psi_quant_path : string
@@ -455,9 +468,9 @@ class MoleculeMakerStep(AbstractCampareeStep):
             be positive, non-zero integer (this is not currently checked).
 
         """
-        sample_data_directory = os.path.join(self.data_directory_path, f"sample{sample.sample_id}")
-        log_file_path = os.path.join(self.log_directory_path, f'sample{sample.sample_id}',
-                                     CAMPAREE_CONSTANTS.MOLECULE_MAKER_LOG_FILENAME)
+        sample_log_dir = pathlib.Path(self.log_directory_path) / f'sample{sample.sample_id}'
+        sample_log_dir.mkdir(exist_ok=True)
+        log_file_path = sample_log_dir / CAMPAREE_CONSTANTS.MOLECULE_MAKER_LOG_FILENAME
         output_file_extension = MoleculeMakerStep.OUTPUT_OPTIONS_W_EXTENSIONS[output_type]
 
         if seed is not None:
@@ -469,6 +482,11 @@ class MoleculeMakerStep(AbstractCampareeStep):
 
             print(f"Generating molecules for sample{sample.sample_id}.")
             log_file.write(f"Generating molecules for sample{sample.sample_id}.\n")
+
+            intron_quant_path = os.path.join(sample_data_directory, CAMPAREE_CONSTANTS.INTRON_OUTPUT_FILENAME)
+            gene_quant_path = os.path.join(sample_data_directory, CAMPAREE_CONSTANTS.TXQUANT_OUTPUT_GENE_FILENAME)
+            psi_quant_path = os.path.join(sample_data_directory, CAMPAREE_CONSTANTS.TXQUANT_OUTPUT_PSI_FILENAME)
+            allele_quant_path = os.path.join(sample_data_directory, CAMPAREE_CONSTANTS.ALLELIC_IMBALANCE_OUTPUT_FILENAME)
 
             log_file.write(f"Parameters:\n"
                            f"    Output file type: {output_type}\n"
@@ -498,7 +516,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
             self.allelic_quant = self.load_allelic_quants(allele_quant_path)
 
             print('Loading annotations, transcriptome sequences, and genome sequences'
-                  ' from botr parental genomes.')
+                  ' from both parental genomes.')
             log_file.write('Loading annotations, transcriptome sequences, and genome'
                            ' sequences from both parental genomes.\n')
 
@@ -534,13 +552,14 @@ class MoleculeMakerStep(AbstractCampareeStep):
             # Generate molecules and save/export them according to output type.
             print('Generating molecules and saving/exporting the results.')
             log_file.write('Generating molecules and saving/exporting the results.')
+            print(f"Molecule maker output type {repr(output_type)}")
             if output_type == "packet":
                 # TODO: potentially rounds down the number of molecules to make
                 num_packets = output_molecule_count // molecules_per_packet
                 for i in range(1,num_packets+1):
                     print(f"    Generating packet {i} of {num_packets}")
                     log_file.write(f"    Generating packet {i} of {num_packets}\n")
-                    packet = self.make_packet(sample=sample, id=f"sample{sample.sample_id}.{i}")
+                    packet = self.make_packet(sample=sample, id=f"sample{sample.sample_id}.{i}", N=molecules_per_packet) #TODO: id needs to be an integer
 
                     molecule_packet_filename = os.path.join(sample_data_directory,
                                                             self.OUTPUT_FILENAME_PATTERN.format(output_type=output_type,
@@ -549,20 +568,31 @@ class MoleculeMakerStep(AbstractCampareeStep):
                     with open(molecule_packet_filename, "wb") as out_file:
                         pickle.dump(packet, out_file)
             elif output_type == "file":
-                print("Generating molecule file.")
-                log_file.write("Generating molecule file.")
                 molecule_output_filename = os.path.join(sample_data_directory,
                                                         self.OUTPUT_FILENAME_PATTERN.format(output_type=output_type,
                                                                                             packet_num="",
                                                                                             extension=output_file_extension))
+                print(f"Generating molecule file {molecule_output_filename}.")
+                log_file.write(f"Generating molecule file {molecule_output_filename}.")
                 self.make_molecule_file(filepath=molecule_output_filename,
-                                        N = output_molecule_count)
+                                        N = output_molecule_count,
+                                        sample = sample)
+            elif output_type == "generator":
+                def generator():
+                    num_packets = output_molecule_count // molecules_per_packet
+                    print(f"Generating {num_packets} packets")
+                    for i in range(1, num_packets+1):
+                        packet = self.make_packet(sample=sample, id=i, N=molecules_per_packet)
+                        yield packet
+                return generator()
+            else:
+                raise ValueError(f"Expected output_type to be 'packet', 'file', or 'generator'. Instead got {repr(output_type)}")
 
             log_file.write("\nALL DONE!\n")
 
-    def get_commandline_call(self, sample, intron_quant_path, gene_quant_path,
-                             psi_quant_path, allele_quant_path, output_type,
-                             output_molecule_count, seed=None,
+    def get_commandline_call(self, sample, sample_data_directory,
+                             output_type, output_molecule_count,
+                             seed=None,
                              molecules_per_packet=None):
         """Prepare command to execute the MoleculeMakerStep from the command line,
         given all of the arugments used to run the execute() function.
@@ -573,14 +603,8 @@ class MoleculeMakerStep(AbstractCampareeStep):
             Sample object corresponding to the input distributions. When exporting
             molecule packets, this Sample object is used to instantiate the
             MoleculePacket object.
-        intron_quant_path : string
-            Path to file containing intron expression distributions.
-        gene_quant_path : string
-            Path to file containing gene expression distributions.
-        psi_quant_path : string
-            Path to file containing transcript PSI value distributions.
-        allele_quant_path : string
-            Path to file containing distributions for allelic imbalance.
+        sample_data_directory : string
+            Path to directory containing the sample data
         output_type : string
             Type of file or object used to save or export simulated molecules.
             Sould be one of {', '.join(MoleculeMakerStep.OUTPUT_OPTIONS_W_EXTENSIONS.keys())}.
@@ -607,13 +631,10 @@ class MoleculeMakerStep(AbstractCampareeStep):
         molecule_maker_step_path = molecule_maker_step_path.rstrip('c')
 
         command = (f" python {molecule_maker_step_path}"
+                   f" --parameters '{json.dumps(self.parameters)}'"
                    f" --log_directory_path {self.log_directory_path}"
-                   f" --data_directory_path {self.data_directory_path}"
+                   f" --sample_data_directory {sample_data_directory}"
                    f" --sample '{repr(sample)}'"
-                   f" --intron_quant '{intron_quant_path}'"
-                   f" --gene_quant '{gene_quant_path}'"
-                   f" --psi_quant '{psi_quant_path}'"
-                   f" --allele_quant '{allele_quant_path}'"
                    f" --output_type {output_type}"
                    f" --output_molecule_count {output_molecule_count}")
         if seed is not None:
@@ -623,9 +644,10 @@ class MoleculeMakerStep(AbstractCampareeStep):
 
         return command
 
-    def get_validation_attributes(self, sample, intron_quant_path, gene_quant_path,
-                                  psi_quant_path, allele_quant_path, output_type,
-                                  output_molecule_count, seed=None,
+    def get_validation_attributes(self, sample, sample_data_directory,
+                                  output_type,
+                                  output_molecule_count,
+                                  seed=None,
                                   molecules_per_packet=None):
         """Prepare attributes required by is_output_valid() function to validate
         output generated by the MoleculeMakerStep job.
@@ -636,24 +658,8 @@ class MoleculeMakerStep(AbstractCampareeStep):
             Sample object corresponding to the input distributions. When exporting
             molecule packets, this Sample object is used to instantiate the
             MoleculePacket object.
-        intron_quant_path : string
-            Path to file containing intron expression distributions. [Note: this
-            parameter is captured just so get_validation_attributes() accepts
-            the same arguments as get_commandline_call(). It is not used here.]
-        gene_quant_path : string
-            Path to file containing gene expression distributions. [Note: this
-            parameter is captured just so get_validation_attributes() accepts
-            the same arguments as get_commandline_call(). It is not used here.]
-        psi_quant_path : string
-            Path to file containing transcript PSI value distributions. [Note:
-            this parameter is captured just so get_validation_attributes()
-            accepts the same arguments as get_commandline_call(). It is not used
-            here.]
-        allele_quant_path : string
-            Path to file containing distributions for allelic imbalance. [Note:
-            this parameter is captured just so get_validation_attributes()
-            accepts the same arguments as get_commandline_call(). It is not used
-            here.]
+        sample_data_path : string
+            Path to directory containing all the sample data.
         output_type : string
             Type of file or object used to save or export simulated molecules.
             Sould be one of {', '.join(MoleculeMakerStep.OUTPUT_OPTIONS_W_EXTENSIONS.keys())}.
@@ -671,13 +677,13 @@ class MoleculeMakerStep(AbstractCampareeStep):
         Returns
         -------
         dict
-            A MoleculeMakerStep job's data_directory, log_directory, corresponding
+            A MoleculeMakerStep job's sample_data_directory, log_directory, corresponding
             sample ID, output file type, output molecule count, and the number of
             molecules per packet.
         """
         validation_attributes = {}
-        validation_attributes['data_directory'] = self.data_directory_path
         validation_attributes['log_directory'] = self.log_directory_path
+        validation_attributes['sample_data_directory'] = sample_data_directory
         validation_attributes['sample_id'] = sample.sample_id
         validation_attributes['output_type'] = output_type
         validation_attributes['output_molecule_count'] = output_molecule_count
@@ -707,7 +713,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
 
         """
 
-        data_directory_path = validation_attributes['data_directory']
+        sample_data_directory = validation_attributes['sample_data_directory']
         log_directory_path = validation_attributes['log_directory']
         sample_id = validation_attributes['sample_id']
         output_type = validation_attributes['output_type']
@@ -721,7 +727,6 @@ class MoleculeMakerStep(AbstractCampareeStep):
         valid_output = False
 
         # Construct output filenames/paths
-        sample_data_directory = os.path.join(data_directory_path, f"sample{sample_id}")
         log_file_path = os.path.join(log_directory_path, f'sample{sample_id}',
                                      CAMPAREE_CONSTANTS.MOLECULE_MAKER_LOG_FILENAME)
 
@@ -749,6 +754,11 @@ class MoleculeMakerStep(AbstractCampareeStep):
                                                                                           packet_num="",
                                                                                           extension=output_file_extension))
             all_molecule_files_exist = os.path.isfile(molecule_file)
+        elif output_type == "generator":
+            pass # Always valid
+        else:
+            # Unknown output type specified
+            valid_output = False
 
 
         # TODO: Report reason why out validation failed.
@@ -770,23 +780,16 @@ class MoleculeMakerStep(AbstractCampareeStep):
         """Entry point into script. Parses the argument list to obtain all the
         files needed and feeds them to the class constructor. Calls the appropriate
         methods thereafter.
-
         """
         parser = argparse.ArgumentParser(description='Generate simulated molecules and export/save.')
         parser.add_argument('-l', '--log_directory_path', required=True,
                             help="Path to log directory.")
-        parser.add_argument('-d', '--data_directory_path', required=True,
-                            help='Path to data directory')
+        parser.add_argument('--parameters', required=True,
+                            help="JSON of parameters")
+        parser.add_argument('-d', '--sample_data_directory', required=True,
+                            help='Path to sample data directory')
         parser.add_argument('--sample', required=True,
                             help='String representation of a Sample object.')
-        parser.add_argument('--intron_quant', required=True,
-                            help='Path to file containing intron expression distributions.')
-        parser.add_argument('--gene_quant', required=True,
-                            help='Path to file containing gene expression distributions.')
-        parser.add_argument('--psi_quant', required=True,
-                            help='Path to file containing transcript PSI value distributions.')
-        parser.add_argument('--allele_quant', required=True,
-                            help='Path to file containing distributions for allelic imbalance.')
         parser.add_argument('--output_type', required=True,
                             help=f"Type of molecule output ({', '.join(MoleculeMakerStep.OUTPUT_OPTIONS_W_EXTENSIONS.keys())}).")
         parser.add_argument('--output_molecule_count', type=int, required=True,
@@ -799,13 +802,11 @@ class MoleculeMakerStep(AbstractCampareeStep):
         args = parser.parse_args()
         sample = eval(args.sample)
 
-        molecule_maker = MoleculeMakerStep(log_directory_path=args.log_directory_path,
-                                           data_directory_path=args.data_directory_path)
+        molecule_maker = MoleculeMakerStep(
+                log_directory_path=args.log_directory_path,
+                parameters = json.loads(args.parameters))
         molecule_maker.execute(sample=sample,
-                               intron_quant_path=args.intron_quant,
-                               gene_quant_path=args.gene_quant,
-                               psi_quant_path=args.psi_quant,
-                               allele_quant_path=args.allele_quant,
+                               sample_data_directory=args.sample_data_directory,
                                output_type=args.output_type,
                                output_molecule_count=args.output_molecule_count,
                                seed=args.seed,
