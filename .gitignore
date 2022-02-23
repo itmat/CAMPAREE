@@ -13,6 +13,9 @@ venv*
 *.egg-info
 *.swp
 
+# Ignore local builds of Sphinx HTML documentation
+doc/_build
+
 # Ignore contents of resources directory, except for baby genome files. Note,
 # this ignores the uncompressed STAR index, but not the tar.gz one.
 resources/*
@@ -27,3 +30,6 @@ resources/baby_genome.mm10/*
 # baby genome.
 test_data/results/*
 !test_data/fastq_files/*.fq.gz
+
+# Ignore document build files
+doc/_build/*

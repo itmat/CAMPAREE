@@ -1,4 +1,4 @@
-# Configuration File for CAMPAREE (v0.3.0)
+# Configuration File for CAMPAREE (v0.4.0)
 # See baby.config.yaml for an example of a fully specified config file.
 # Everything listed below is required, except for those labeled [OPTIONAL].
 # To remove optional arguments, they can be commented out by placing a "#"
@@ -17,9 +17,9 @@ setup:
 
     # The method used to submit jobs for processing. If specified on command
     # line with the "-m" argument, it will override the value here. Currently
-    # supports "serial" (single-core), "lsf" (distributed LSF system) and "sge"
-    # (distributed SGE system). Case-sensitive. Other modes may be added in
-    # later releases.
+    # supports "serial" (single-core), "lsf" (distributed LSF system), "sge"
+    # (distributed SGE system), and "batch" (AWS batch). Case-sensitive.
+    # Other modes may be added in later releases.
     scheduler_mode: lsf
 
     # [OPTIONAL] Specify the number of processors and the amount of RAM (in Mb)
@@ -36,6 +36,13 @@ setup:
         # supported to give advanced users greater control over the submission
         # commands.
         default_submission_args:
+
+    # [OPTIONAL] The maximum number of times a failed job/step will attempt
+    # to repeat before the entire CAMPAREE run halts. This must be an integer
+    # greater than or equal to 0. A value of 0 for this parameter means
+    # CAMPAREE will not attempt to resubmit failed jobs before halting.
+    # [DEFAULT: 3]
+    job_resub_limit: 3
 
 ### System locations for genome annotation resources used by CAMPAREE
 # See www.smartURLdescribingEverything.com for detailed information
@@ -225,6 +232,22 @@ output:
     # specific molecule count is provided, or if 'override_sample_molecule_count'
     # is set to 'True'.
     default_molecule_count: 50000
+    # Parameters that control the generated molecules
+    parameters:
+        # Determine the min and max length of a polyA tail to
+        # add to the created molecules. Length is chosen uniformly
+        # between the two values.
+        min_polyA_tail_length: 50
+        max_polyA_tail_length: 250
+    # [OPTIONAL] When generating molecules, override the default parameters the
+    # scheduler uses to submit jobs. When generating transcipts from larger
+    # genomes and complex transcriptomes, the molecule maker may require more
+    # RAM than the default scheduler parameters. Please note, these values are
+    # ignored when the scheduler_mode is set to "serial".
+    scheduler_parameters:
+        # For a mammalian-sized genome, 8GB of RAM should be sufficient to
+        # generate molecules, in most cases.
+        memory_in_mb: 8000
 
 ### Configuration of individual steps in the CAMPAREE pipeline
 # CAMPAREE uses this list to assemble all of its pipeline components. Therefore,
