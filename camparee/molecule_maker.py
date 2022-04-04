@@ -180,7 +180,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
         PADDING = ("M", 1_000_000_000)
         results = collections.defaultdict(lambda : [PADDING])
         for chrom, split_cigar in genome_cigars.items():
-            results[chrom] = list(split_cigar)
+            results[chrom] = list(split_cigar) + [PADDING]
 
         return results
 
