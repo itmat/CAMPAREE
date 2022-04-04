@@ -146,7 +146,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
         get locations past the last indel
         """
         genome_cigars = collections.defaultdict(lambda : collections.deque())
-        last_indexes = collections.defaultdict(lambda : 1)
+        last_indexes = collections.defaultdict(lambda : 0)
         with open(file_path) as indel_file:
             for line in indel_file:
                 loc, indel_type, length = line.split('\t')
@@ -159,7 +159,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
                 if last_index < start:
                     # Match up to the start of the indel
                     genome_cigars[chrom].append(
-                        ('M', start - last_index + 1)
+                        ('M', start - last_index)
                     )
 
                 # Add the indel
@@ -167,10 +167,12 @@ class MoleculeMakerStep(AbstractCampareeStep):
                     genome_cigars[chrom].append(
                         ('I', length)
                     )
+                    last_indexes[chrom] = start
                 else:
                     genome_cigars[chrom].append(
                         ('D', length)
                     )
+                    last_indexes[chrom] = start + length
 
         # Gather into a results
         # which is a default dict which fills in the padding to

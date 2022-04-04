@@ -444,6 +444,7 @@ class GenomeBuilderStep(AbstractCampareeStep):
                         # If the nascent genome seq position translated to reference is downstream of the variant
                         # ignore the variant for this genome.
                         if genome.position + genome.offset > position:
+                            print(f"Skipping {datum} in {genome_index}: already at {genome.position} + {genome.offset}")
                             continue
 
                         # If the nascent genome seq position translated to reference is upstream of the variant add
@@ -475,11 +476,15 @@ class GenomeBuilderStep(AbstractCampareeStep):
                                 if self.ignore_indels:
                                     genome.append_segment(ref)
                                 elif len(alt) > len(ref):
-                                    genome.insert_segment(alt)
+                                    # VCF encodes insertions like AT -> ACGT as ref=A, alt=ACG
+                                    # So the 'A' is just a match while the CG is an insertion
+                                    assert alt[:len(ref)] == ref
+                                    genome.append_segment(ref)
+                                    genome.insert_segment(alt[len(ref):])
                                 else:
-                                    # TODO: does this always correctly "delete" the right segment?
-                                    #  Eg: if ref is ACGT and alt is CG, then there'd actually be two deletions
-                                    #  Unclear if we actually get these, but also whether deletions are at the start or end
+                                    # Deletions are assumed to always be at the end of the ref
+                                    # per VCF standard (we don't all complex substitutions not allowed)
+                                    genome.append_segment(alt)
                                     genome.delete_segment(len(ref) - len(alt))
                             log_file.write(f"Currently: {genome}\n")
 
