@@ -13,6 +13,7 @@ from camparee.camparee_constants import CAMPAREE_CONSTANTS
 from beers_utils.molecule_packet import MoleculePacket
 from beers_utils.molecule import Molecule
 from beers_utils.sample import Sample
+from beers_utils.cigar import chain_from_splits, split_cigar
 from beers_utils.general_utils import GeneralUtils
 
 class MoleculeMakerStep(AbstractCampareeStep):
@@ -139,40 +140,47 @@ class MoleculeMakerStep(AbstractCampareeStep):
         where the offset (i.e. custom_genome_position - reference_genome_position values) change
         and offset_values is a list in the same order indicating these values.
         Note that the offset value is to be used for all bases AFTER the offset position, not on that base
+
+        NOTE: adds a 'padding' M (match) of length 1_000_000_000 to the end of the genome
+        since we don't load the full (reference) genome length in but may still need to
+        get locations past the last indel
         """
-        indels = collections.defaultdict(lambda : (collections.deque(), collections.deque()))
-        offset_values = collections.defaultdict(lambda : collections.deque())
-        current_offsets = collections.defaultdict(lambda : 0)
+        genome_cigars = collections.defaultdict(lambda : collections.deque())
+        last_indexes = collections.defaultdict(lambda : 1)
         with open(file_path) as indel_file:
             for line in indel_file:
                 loc, indel_type, length = line.split('\t')
                 chrom, start = loc.split(':')
 
-                # indel_start needs to be relative to the custom genome but the indel file has starts
-                # that are relative to the reference genome
-                indel_start = int(start) + current_offsets[chrom]
-                indel_length = int(length)
+                start = int(start)
+                length = int(length)
 
-                starts, data = indels[chrom]
-                starts.append(indel_start)
-                data.append((indel_start, indel_type, indel_length))
+                last_index = last_indexes[chrom]
+                if last_index < start:
+                    # Match up to the start of the indel
+                    genome_cigars[chrom].append(
+                        ('M', start - last_index + 1)
+                    )
 
-                if indel_type == "I":
-                    current_offsets[chrom] += indel_length
-                elif indel_type == "D":
-                    current_offsets[chrom] -= indel_length
+                # Add the indel
+                if indel_type == 'I':
+                    genome_cigars[chrom].append(
+                        ('I', length)
+                    )
+                else:
+                    genome_cigars[chrom].append(
+                        ('D', length)
+                    )
 
-                offset_values[chrom].append(current_offsets[chrom])
+        # Gather into a results
+        # which is a default dict which fills in the padding to
+        # any chromosome even if it doesn't have any indels
+        PADDING = ("M", 1_000_000_000)
+        results = collections.defaultdict(lambda : [PADDING])
+        for chrom, split_cigar in genome_cigars.items():
+            results[chrom] = list(split_cigar)
 
-        # We make these defaultdicts in case there are chromosomes without any indels
-        # in which case we don't see them in this file, but we don't want to crash on them
-        result = collections.defaultdict(lambda: (numpy.array([]), list()))
-        offset_data = collections.defaultdict(lambda: (numpy.array([]), list()))
-        for key, (starts, data) in indels.items():
-            result[key] = (numpy.array(starts), list(data))
-            offset_data[key] = (numpy.array(starts), offset_values[key])
-
-        return result, offset_data
+        return results
 
     def load_intron_quants(self, file_path):
         """
@@ -296,10 +304,11 @@ class MoleculeMakerStep(AbstractCampareeStep):
         cigar = ''.join( f"{end - start + 1}M{gap}N" for start,end,gap in zip(starts[:-1],ends[:-1],gaps)) \
                     + f"{ends[-1] - starts[-1] + 1}M"
 
-        ref_cigar =  ''.join( f"{self.get_reference_cigar(start, end, chrom, allele_number)}{gap}N"
-                            for start,end,gap in zip(starts[:-1],ends[:-1],gaps)) \
-                        + self.get_reference_cigar(starts[-1], ends[-1], chrom, allele_number)
-        ref_start = self.convert_genome_position_to_reference(starts[0], chrom, allele_number)
+        cigar_split = split_cigar(cigar)
+        ref_start, ref_cigar, _ = chain_from_splits(
+                starts[0], cigar_split, strand,
+                1, self.genome_cigar_splits[allele_number - 1][chrom], "+"
+        )
 
         transcript_id = f"{sample.sample_id}_{transcript}_{allele_number}{'_pre_mRNA' if pre_mRNA else ''}"
 
@@ -331,66 +340,6 @@ class MoleculeMakerStep(AbstractCampareeStep):
 
 
         return sequence, starts[0], cigar, ref_start, ref_cigar, strand, chrom, transcript_id
-
-    def get_reference_cigar(self, start, end, chrom, allele):
-        """Returns the cigar string for the part of the custom chromosome on the
-        segment from  start to end (inclusive, one based) relative to the reference
-        genome
-        """
-        indel_starts, indel_data = self.indels[allele-1][chrom]
-
-        cigar_components = []
-        start_of_remaining = start
-
-        # Skip to the first relevant indel, then continue until they go past this region
-        index_idx = numpy.searchsorted(indel_starts, start)
-        for indel in indel_data[index_idx:]:
-            indel_start, indel_type, indel_length = indel
-            if indel_start >= end:
-                # The deletion or insertion begins immediately AFTER indel_start
-                # so we're done, we've gone through all indels in our exon
-                break
-
-            if indel_start > start_of_remaining:
-                # Match a region without indels
-                cigar_components.append(f"{indel_start - start_of_remaining + 1}M")
-
-            if indel_type == "I":
-                # Custom genome has an insertion right after indel_start
-                # Our region might end before the insertion does, so cap the length of the insertion
-                length = min(end, indel_start + indel_length) - indel_start
-                cigar_components.append(f"{length}I")
-                # Increment to after the indel, which includes the inserted bases
-                start_of_remaining = indel_start + indel_length + 1
-            elif indel_type == "D":
-                # Custom genome has a deletion right after indel_start
-                cigar_components.append(f"{indel_length}D")
-                # Advance to just after the deletion, but don't increment by the length of the deletion
-                # since the deleted bases don't appear in our custom genome segment
-                start_of_remaining = indel_start + 1
-
-        # The last chunk of matches after the last indel
-        if end >= start_of_remaining:
-            cigar_components.append(f"{end - start_of_remaining + 1}M")
-
-        return ''.join(cigar_components)
-
-    def convert_genome_position_to_reference(self, position, chrom, allele):
-        """
-        Convert (1-indexed) position into the current (custom) genome into a position
-        relative to the reference genome
-        """
-        # offset_positions is a sorted list of all offsets in this allele+chromosome
-        # so find where our position fits in, so offset_index -1 is the last offset strictly before position
-        offset_starts, offset_values = self.offset_data[allele-1][chrom]
-        offset_index = numpy.searchsorted(offset_starts, position)
-
-        if offset_index == 0:
-            # If ours is before all offsets, then we need no offset
-            return position
-        else:
-            offset = offset_values[offset_index-1]
-            return position - offset
 
     def make_packet(self, sample, id="packet0", N=10_000):
         molecules = []
@@ -542,12 +491,9 @@ class MoleculeMakerStep(AbstractCampareeStep):
             # Read and load indel data for each parental genome. This information is
             # used when constructing CIGAR strings mapping transcripts back to their
             # locations in the original reference genome.
-            indel_data = \
-                [self.load_indels(os.path.join(sample_data_directory,
+            self.genome_cigar_splits =  [self.load_indels(os.path.join(sample_data_directory,
                                                self._PARENTAL_GENOME_INDEL_FILENAME_PATTERN.format(genome_name=genome_name)))
-                    for genome_name in [1,2]]
-            self.indels = [indels for indels, offset_data in indel_data]
-            self.offset_data = [offset_data for indels, offset_data in indel_data]
+                                            for genome_name in [1,2]]
 
             # Generate molecules and save/export them according to output type.
             print('Generating molecules and saving/exporting the results.')
