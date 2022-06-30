@@ -83,38 +83,20 @@ class MoleculeMakerStep(AbstractCampareeStep):
         return transcripts
 
 
-    def load_transcriptome(self, file_path):
-        """
-        Read in a fasta file and load is a dictionary id -> sequence
-        assumed one-line for the whole contig
-        """
-        transcripts = dict()
-        with open(file_path) as transcriptome_file:
-            while True:
-                line = transcriptome_file.readline()
-                if not line:
-                    break
-
-                assert line[0] == ">"
-                transcript_id, chrom, region = line[1:].strip().split(":")
-                sequence = transcriptome_file.readline().strip()
-                transcripts[transcript_id] = sequence
-        return transcripts
-
     def load_genome(self, file_path):
         """
         Read in a fasta file and load is a dictionary id -> sequence
         """
         genome = dict()
-        with open(file_path) as transcriptome_file:
+        with open(file_path) as genome_file:
             while True:
-                line = transcriptome_file.readline()
+                line = genome_file.readline()
                 if not line:
                     break
 
                 assert line[0] == ">"
                 contig = line[1:].strip()
-                sequence = transcriptome_file.readline().strip()
+                sequence = genome_file.readline().strip()
                 genome[contig] = sequence
         return genome
 
@@ -471,10 +453,6 @@ class MoleculeMakerStep(AbstractCampareeStep):
             # Read and load annotations, as well as full transcriptome and genome
             # sequences for each parental genome. This information is used when
             # generating the simulated molecule sequences.
-            self.transcriptomes = \
-                [self.load_transcriptome(os.path.join(sample_data_directory,
-                                                      self._PARENTAL_TX_FASTA_FILENAME_PATTERN.format(genome_name=genome_name)))
-                    for genome_name in [1,2]]
             self.annotations = \
                 [self.load_annotation(os.path.join(sample_data_directory,
                                                    self._PARENTAL_ANNOT_FILENAME_PATTERN.format(genome_name=genome_name)))
