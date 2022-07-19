@@ -287,7 +287,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
 
         cigar_split = split_cigar(cigar)
         ref_start, ref_cigar, _ = chain_from_splits(
-                starts[0], cigar_split, strand,
+                starts[0]+1, cigar_split, strand,
                 1, self.genome_cigar_splits[allele_number - 1][chrom], "+"
         )
 
@@ -296,7 +296,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
 
         # Build the actual sequence
         chrom_sequence = self.genomes[allele_number - 1][chrom]
-        sequence = ''.join( chrom_sequence[start-1:end] for start,end in zip(starts, ends) )
+        sequence = ''.join( chrom_sequence[start:end+1] for start,end in zip(starts, ends) )
 
         if strand == '-':
             # We always give the sequence from 5' to 3' end of the RNA molecule
