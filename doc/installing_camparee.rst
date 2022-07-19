@@ -9,7 +9,7 @@ General Instructions
 Installation Prerequisites:
 
 - git
-- python version 3.6
+- python version 3.10
 - Java 1.8
 
 The following installation instructions are for Python3 installed in a Linux

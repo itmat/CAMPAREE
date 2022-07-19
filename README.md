@@ -21,7 +21,7 @@ This guide will walk you through basic installation and usage of CAMPAREE runnin
 Make sure you have the following installed on your system:
 
 - git
-- python version 3.6
+- python version 3.10
 - Java 1.8
 
 Pull the git repo for CAMPAREE and BEERS_UTILS the into a convenient location:

@@ -14,7 +14,7 @@ Installation
 Make sure you have the following installed on your system:
 
 - git
-- python version 3.6
+- python version 3.10
 - pip
 - Java 1.8
 
@@ -107,5 +107,5 @@ the CAMPAREE install directory::
 
 The output of this command should match the following md5sum values::
 
-    191b3bc373bade1b764783741faccefe  sample1/molecule_file.txt
-    8f1eb53067ad4ad6c17d39baa9934599  sample2/molecule_file.txt
+    835791fad7ee1d8c00d4285ffc166bb1  sample1/molecule_file.txt
+    03cb79060e9878e01c7ce4b64646f88d  sample2/molecule_file.txt
