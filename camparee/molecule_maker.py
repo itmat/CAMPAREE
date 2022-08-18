@@ -15,6 +15,7 @@ from beers_utils.molecule import Molecule
 from beers_utils.sample import Sample
 from beers_utils.cigar import chain_from_splits, split_cigar, query_seq_length
 from beers_utils.general_utils import GeneralUtils
+from beers_utils.read_fasta import read_fasta
 
 class MoleculeMakerStep(AbstractCampareeStep):
     """
@@ -81,24 +82,6 @@ class MoleculeMakerStep(AbstractCampareeStep):
                                                 [int(start) for start in exon_starts.split(",")],
                                                 [int(end) for end in exon_ends.split(",")])
         return transcripts
-
-
-    def load_genome(self, file_path):
-        """
-        Read in a fasta file and load is a dictionary id -> sequence
-        """
-        genome = dict()
-        with open(file_path) as genome_file:
-            while True:
-                line = genome_file.readline()
-                if not line:
-                    break
-
-                assert line[0] == ">"
-                contig = line[1:].strip()
-                sequence = genome_file.readline().strip()
-                genome[contig] = sequence
-        return genome
 
     def load_indels(self, file_path, genome):
         """
@@ -463,8 +446,10 @@ class MoleculeMakerStep(AbstractCampareeStep):
                                                    self._PARENTAL_ANNOT_FILENAME_PATTERN.format(genome_name=genome_name)))
                     for genome_name in [1,2]]
             self.genomes = \
-                [self.load_genome(os.path.join(sample_data_directory,
-                                               self._PARENTAL_GENOME_FASTA_FILENAME_PATTERN.format(genome_name=genome_name)))
+                [read_fasta(os.path.join(sample_data_directory,
+                                           self._PARENTAL_GENOME_FASTA_FILENAME_PATTERN.format(genome_name=genome_name)),
+                            replace_Ns = True,
+                            rng = rng)
                     for genome_name in [1,2]]
 
             print('Loading indel information from both parental genomes.')
