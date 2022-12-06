@@ -45,8 +45,8 @@ setup:
     job_resub_limit: 3
 
 ### System locations for genome annotation resources used by CAMPAREE
-# See www.smartURLdescribingEverything.com for detailed information
-# about the organization of the CAMPAREE resources directory.
+# See https://camparee.readthedocs.io/en/latest/resource_files.html for detailed
+# information about the organization of the CAMPAREE resources directory.
 resources:
     # [OPTIONAL] Path to upper-level directory containing genome sequence,
     # annotation info, and STAR index directory. If not provided, defaults to
@@ -79,7 +79,8 @@ resources:
     # copies for each gender in the species. Chromosome names must match those
     # in the reference genome FASTA and annotation files, but may be a subset.
     # Only the chromosomes specified in this file are used to generate
-    # simulated transcripts. See www.smartURLdescribingEverything.com/ploidy
+    # simulated transcripts. See
+    # $https://camparee.readthedocs.io/en/latest/resource_files.html#chromosome-ploidy-file
     # for full details on how to create ploidy file, and how it is used. The
     # bin/format_reference_files_for_camparee.py script also has the option to
     # create a started ploidy file that will need to be edited to account for

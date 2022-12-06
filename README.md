@@ -41,6 +41,7 @@ And activate the environment:
 Install required libraries:
 
     pip install -r requirements.txt
+    pip install -r ../BEERS_UTILS/requirements.txt
 
 Install CAMPAREE package in your Python environment:
 
