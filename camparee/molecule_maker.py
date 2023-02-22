@@ -362,12 +362,6 @@ class MoleculeMakerStep(AbstractCampareeStep):
             MoleculePacket object.
         sample_data_directory : string
             Path to directory containing the data for the sample.
-        gene_quant_path : string
-            Path to file containing gene expression distributions.
-        psi_quant_path : string
-            Path to file containing transcript PSI value distributions.
-        allele_quant_path : string
-            Path to file containing distributions for allelic imbalance.
         output_type : string
             Type of file or object used to save or export simulated molecules.
             Sould be one of {', '.join(MoleculeMakerStep.OUTPUT_OPTIONS_W_EXTENSIONS.keys())}.
