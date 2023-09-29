@@ -23,6 +23,7 @@ resources/*
 resources/baby_genome.mm10/*
 !resources/baby_genome.mm10/baby_genome.mm10.oneline_seqs.fa
 !resources/baby_genome.mm10/baby_genome.mm10.annotation.txt
+!resources/baby_genome.mm10/baby_genome.mm10.annotation.gtf
 !resources/baby_genome.mm10/baby_genome.mm10.chr_ploidy.txt
 
 # Ignore any results generated in the test_data/ directory as part of validating

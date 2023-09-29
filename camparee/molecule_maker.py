@@ -13,7 +13,9 @@ from camparee.camparee_constants import CAMPAREE_CONSTANTS
 from beers_utils.molecule_packet import MoleculePacket
 from beers_utils.molecule import Molecule
 from beers_utils.sample import Sample
+from beers_utils.cigar import chain_from_splits, split_cigar, query_seq_length
 from beers_utils.general_utils import GeneralUtils
+from beers_utils.read_fasta import read_fasta
 
 class MoleculeMakerStep(AbstractCampareeStep):
     """
@@ -50,8 +52,8 @@ class MoleculeMakerStep(AbstractCampareeStep):
         """
         self.log_directory_path = log_directory_path
         self.data_directory_path = data_directory_path
-        self.min_polyA_tail_length = parameters["min_polyA_tail_length"]
-        self.max_polyA_tail_length = parameters["max_polyA_tail_length"]
+        self.min_polyA_tail_length = parameters.get("min_polyA_tail_length", 50)
+        self.max_polyA_tail_length = parameters.get("max_polyA_tail_length", 250)
         self.parameters = parameters
 
     # Nearly all of the validation for this step is already performed in the
@@ -81,51 +83,12 @@ class MoleculeMakerStep(AbstractCampareeStep):
                                                 [int(end) for end in exon_ends.split(",")])
         return transcripts
 
-
-    def load_transcriptome(self, file_path):
-        """
-        Read in a fasta file and load is a dictionary id -> sequence
-        assumed one-line for the whole contig
-        """
-        transcripts = dict()
-        with open(file_path) as transcriptome_file:
-            while True:
-                line = transcriptome_file.readline()
-                if not line:
-                    break
-
-                assert line[0] == ">"
-                transcript_id, chrom, region = line[1:].strip().split(":")
-                sequence = transcriptome_file.readline().strip()
-                transcripts[transcript_id] = sequence
-        return transcripts
-
-    def load_genome(self, file_path):
-        """
-        Read in a fasta file and load is a dictionary id -> sequence
-        """
-        genome = dict()
-        with open(file_path) as transcriptome_file:
-            while True:
-                line = transcriptome_file.readline()
-                if not line:
-                    break
-
-                assert line[0] == ">"
-                contig = line[1:].strip()
-                sequence = transcriptome_file.readline().strip()
-                genome[contig] = sequence
-        return genome
-
-    def load_indels(self, file_path):
+    def load_indels(self, file_path, genome):
         """
         Read in the file of indel locations for a given custom genome
 
-        Store it as a dictionary chrom -> (indel_starts, indel_data)
-        where indel_starts is a numpy array of start locations of the indels
-        (i.e. 1 based coordinates of the base in the custom genome where the insertion/deletion occurs immediately after)
-        and indel_data is a list of tuples (indel_start, indel_type, indel_length)
-        where indel_type is 'I' or 'D'
+        :param file_path: path to the indel file
+        :param genome: genomic sequences of this allele
 
         The indel file is tab-separated with format "chrom:start type length"  and looks like the following:
         1:4897762       I       2
@@ -134,45 +97,54 @@ class MoleculeMakerStep(AbstractCampareeStep):
 
         Assumption is that the file is sorted by start and no indels overlap
 
-        Moreover, return a dictionary chrom -> (offset_starts, offset_values)
-        where offset_starts is as indel_starts, a sorted numpy array with indicating the positions
-        where the offset (i.e. custom_genome_position - reference_genome_position values) change
-        and offset_values is a list in the same order indicating these values.
-        Note that the offset value is to be used for all bases AFTER the offset position, not on that base
+        Returns  a 'split cigar string' meaning a list of tuples (op, length)
+        where op is one of M, I, D and length is the length of the match, insert, or deletion
+        Good for use with beers_utils.cigar
         """
-        indels = collections.defaultdict(lambda : (collections.deque(), collections.deque()))
-        offset_values = collections.defaultdict(lambda : collections.deque())
-        current_offsets = collections.defaultdict(lambda : 0)
+        genome_cigars = collections.defaultdict(lambda : collections.deque())
+        last_indexes = collections.defaultdict(lambda : 0)
         with open(file_path) as indel_file:
             for line in indel_file:
                 loc, indel_type, length = line.split('\t')
                 chrom, start = loc.split(':')
 
-                # indel_start needs to be relative to the custom genome but the indel file has starts
-                # that are relative to the reference genome
-                indel_start = int(start) + current_offsets[chrom]
-                indel_length = int(length)
+                start = int(start)
+                length = int(length)
 
-                starts, data = indels[chrom]
-                starts.append(indel_start)
-                data.append((indel_start, indel_type, indel_length))
+                last_index = last_indexes[chrom]
+                if last_index < start:
+                    # Match up to the start of the indel
+                    genome_cigars[chrom].append(
+                        ('M', start - last_index)
+                    )
 
-                if indel_type == "I":
-                    current_offsets[chrom] += indel_length
-                elif indel_type == "D":
-                    current_offsets[chrom] -= indel_length
+                # Add the indel
+                if indel_type == 'I':
+                    genome_cigars[chrom].append(
+                        ('I', length)
+                    )
+                    last_indexes[chrom] = start
+                else:
+                    genome_cigars[chrom].append(
+                        ('D', length)
+                    )
+                    last_indexes[chrom] = start + length
 
-                offset_values[chrom].append(current_offsets[chrom])
+        # Gather into a results
+        results = dict()
+        for chrom, sequence in genome.items():
+            if chrom in genome_cigars:
+                # Add the tail of the chromosome on, if necessary
+                tail = len(sequence) - query_seq_length(genome_cigars[chrom])
+                if tail > 0:
+                    results[chrom] = list(genome_cigars[chrom]) + [('M', tail)]
+                else:
+                    results[chrom] = list(genome_cigars[chrom])
+            else:
+                # All match, no indels
+                results[chrom] = [('M', len(sequence))]
 
-        # We make these defaultdicts in case there are chromosomes without any indels
-        # in which case we don't see them in this file, but we don't want to crash on them
-        result = collections.defaultdict(lambda: (numpy.array([]), list()))
-        offset_data = collections.defaultdict(lambda: (numpy.array([]), list()))
-        for key, (starts, data) in indels.items():
-            result[key] = (numpy.array(starts), list(data))
-            offset_data[key] = (numpy.array(starts), offset_values[key])
-
-        return result, offset_data
+        return results
 
     def load_intron_quants(self, file_path):
         """
@@ -256,18 +228,18 @@ class MoleculeMakerStep(AbstractCampareeStep):
                 allelic_quant[gene] = (allele1, allele2)
         return allelic_quant
 
-    def make_molecule(self, sample):
+    def make_molecule(self, sample, rng):
         # Pick random gene
-        gene_index = numpy.random.choice(len(self.genes), p=self.gene_probabilities)
+        gene_index = rng.choice(len(self.genes), p=self.gene_probabilities)
         gene = self.genes[gene_index]
         gene_quant = self.gene_quants[gene_index]
 
         # Pick random transcript in gene
         transcripts, psis = self.isoform_quants[gene]
-        transcript = numpy.random.choice(transcripts, p=psis)
+        transcript = rng.choice(transcripts, p=psis)
 
         # Pick random allele based on the gene's allelic distribution
-        allele_number = numpy.random.choice([1,2], p=self.allelic_quant[gene])
+        allele_number = rng.choice([1,2], p=self.allelic_quant[gene])
 
         # Read in annotation for the chosen transcript
         chrom,strand,tx_start,tx_end,starts,ends= self.annotations[allele_number - 1][transcript]
@@ -285,7 +257,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
             # however, if we do, we will just always give pre_mRNA
             fraction_pre_mRNA = 1.0
 
-        pre_mRNA = numpy.random.uniform() < fraction_pre_mRNA
+        pre_mRNA = rng.uniform() < fraction_pre_mRNA
         if pre_mRNA:
             # If chosen to be pre_mRNA, overwrite the usual exon starts/ends with a single, big "exon"
             starts = [tx_start]
@@ -296,10 +268,11 @@ class MoleculeMakerStep(AbstractCampareeStep):
         cigar = ''.join( f"{end - start + 1}M{gap}N" for start,end,gap in zip(starts[:-1],ends[:-1],gaps)) \
                     + f"{ends[-1] - starts[-1] + 1}M"
 
-        ref_cigar =  ''.join( f"{self.get_reference_cigar(start, end, chrom, allele_number)}{gap}N"
-                            for start,end,gap in zip(starts[:-1],ends[:-1],gaps)) \
-                        + self.get_reference_cigar(starts[-1], ends[-1], chrom, allele_number)
-        ref_start = self.convert_genome_position_to_reference(starts[0], chrom, allele_number)
+        cigar_split = split_cigar(cigar)
+        ref_start, ref_cigar, _ = chain_from_splits(
+                starts[0], cigar_split, strand,
+                1, self.genome_cigar_splits[allele_number - 1][chrom], "+"
+        )
 
         transcript_id = f"{sample.sample_id}_{transcript}_{allele_number}{'_pre_mRNA' if pre_mRNA else ''}"
 
@@ -319,7 +292,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
         if polyA_tail:
             # TODO: polyA tails should vary in length
             # Add polyA tail to 3' end
-            polyA_length = numpy.random.randint(self.min_polyA_tail_length, self.max_polyA_tail_length + 1)
+            polyA_length = rng.integers(self.min_polyA_tail_length, self.max_polyA_tail_length + 1)
             sequence = sequence + "A"*polyA_length
             # Soft-clip the polyA tail at the end since it shouldn't align
             if strand == "+":
@@ -332,70 +305,10 @@ class MoleculeMakerStep(AbstractCampareeStep):
 
         return sequence, starts[0], cigar, ref_start, ref_cigar, strand, chrom, transcript_id
 
-    def get_reference_cigar(self, start, end, chrom, allele):
-        """Returns the cigar string for the part of the custom chromosome on the
-        segment from  start to end (inclusive, one based) relative to the reference
-        genome
-        """
-        indel_starts, indel_data = self.indels[allele-1][chrom]
-
-        cigar_components = []
-        start_of_remaining = start
-
-        # Skip to the first relevant indel, then continue until they go past this region
-        index_idx = numpy.searchsorted(indel_starts, start)
-        for indel in indel_data[index_idx:]:
-            indel_start, indel_type, indel_length = indel
-            if indel_start >= end:
-                # The deletion or insertion begins immediately AFTER indel_start
-                # so we're done, we've gone through all indels in our exon
-                break
-
-            if indel_start > start_of_remaining:
-                # Match a region without indels
-                cigar_components.append(f"{indel_start - start_of_remaining + 1}M")
-
-            if indel_type == "I":
-                # Custom genome has an insertion right after indel_start
-                # Our region might end before the insertion does, so cap the length of the insertion
-                length = min(end, indel_start + indel_length) - indel_start
-                cigar_components.append(f"{length}I")
-                # Increment to after the indel, which includes the inserted bases
-                start_of_remaining = indel_start + indel_length + 1
-            elif indel_type == "D":
-                # Custom genome has a deletion right after indel_start
-                cigar_components.append(f"{indel_length}D")
-                # Advance to just after the deletion, but don't increment by the length of the deletion
-                # since the deleted bases don't appear in our custom genome segment
-                start_of_remaining = indel_start + 1
-
-        # The last chunk of matches after the last indel
-        if end >= start_of_remaining:
-            cigar_components.append(f"{end - start_of_remaining + 1}M")
-
-        return ''.join(cigar_components)
-
-    def convert_genome_position_to_reference(self, position, chrom, allele):
-        """
-        Convert (1-indexed) position into the current (custom) genome into a position
-        relative to the reference genome
-        """
-        # offset_positions is a sorted list of all offsets in this allele+chromosome
-        # so find where our position fits in, so offset_index -1 is the last offset strictly before position
-        offset_starts, offset_values = self.offset_data[allele-1][chrom]
-        offset_index = numpy.searchsorted(offset_starts, position)
-
-        if offset_index == 0:
-            # If ours is before all offsets, then we need no offset
-            return position
-        else:
-            offset = offset_values[offset_index-1]
-            return position - offset
-
-    def make_packet(self, sample, id="packet0", N=10_000):
+    def make_packet(self, sample, rng, id="packet0", N=10_000):
         molecules = []
         for i in range(N):
-            sequence, start, cigar, ref_start, ref_cigar, strand, chrom, transcript_id = self.make_molecule(sample)
+            sequence, start, cigar, ref_start, ref_cigar, strand, chrom, transcript_id = self.make_molecule(sample, rng)
             mol = Molecule(
                     Molecule.new_id(transcript_id),
                     sequence,
@@ -410,7 +323,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
             molecules.append(mol)
         return MoleculePacket(id, sample, molecules)
 
-    def make_molecule_file(self, filepath, sample, N=10_000):
+    def make_molecule_file(self, filepath, sample, rng, N=10_000):
         """
         Write out molecules to a tab-separated file
 
@@ -421,7 +334,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
             header = "#transcript_id\tchrom\tstart\tcigar\tref_start\tref_cigar\tstrand\tsequence\n"
             molecule_file.write(header)
             for i in range(N):
-                sequence, start, cigar, ref_start, ref_cigar, strand, chrom, transcript_id = self.make_molecule(sample)
+                sequence, start, cigar, ref_start, ref_cigar, strand, chrom, transcript_id = self.make_molecule(sample, rng)
                 line = "\t".join([transcript_id,
                                   chrom,
                                   str(start),
@@ -435,7 +348,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
                 molecule_file.write(line)
 
     def execute(self, sample, sample_data_directory, output_type, output_molecule_count, seed=None,
-                molecules_per_packet=None):
+                molecules_per_packet=None, rng=None):
         """This is the main method that generates simulated molecules and saves/
         exports them in the desired format. It uses the gene, transcript, intron,
         and allelic imbalance distributions generated by the other CAMPAREE steps.
@@ -449,12 +362,6 @@ class MoleculeMakerStep(AbstractCampareeStep):
             MoleculePacket object.
         sample_data_directory : string
             Path to directory containing the data for the sample.
-        gene_quant_path : string
-            Path to file containing gene expression distributions.
-        psi_quant_path : string
-            Path to file containing transcript PSI value distributions.
-        allele_quant_path : string
-            Path to file containing distributions for allelic imbalance.
         output_type : string
             Type of file or object used to save or export simulated molecules.
             Sould be one of {', '.join(MoleculeMakerStep.OUTPUT_OPTIONS_W_EXTENSIONS.keys())}.
@@ -466,15 +373,20 @@ class MoleculeMakerStep(AbstractCampareeStep):
         molecules_per_packet : integer
             [OPTIONAL] Maximum number of molecules in each molecule packet. Must
             be positive, non-zero integer (this is not currently checked).
-
+        rng: numpy Generator
+            [OPTIONAL] If provided, will use this for generating random numbers. Otherwise,
+            uses default RNG
         """
+
+        if rng is None:
+            rng = numpy.random.default_rng(seed)
+
         sample_log_dir = pathlib.Path(self.log_directory_path) / f'sample{sample.sample_id}'
+        print(sample_log_dir.resolve())
         sample_log_dir.mkdir(exist_ok=True)
         log_file_path = sample_log_dir / CAMPAREE_CONSTANTS.MOLECULE_MAKER_LOG_FILENAME
         output_file_extension = MoleculeMakerStep.OUTPUT_OPTIONS_W_EXTENSIONS[output_type]
 
-        if seed is not None:
-            numpy.random.seed(seed)
         if not molecules_per_packet:
             molecules_per_packet=MoleculeMakerStep.DEFAULT_MOLECULES_PER_PACKET
 
@@ -523,17 +435,15 @@ class MoleculeMakerStep(AbstractCampareeStep):
             # Read and load annotations, as well as full transcriptome and genome
             # sequences for each parental genome. This information is used when
             # generating the simulated molecule sequences.
-            self.transcriptomes = \
-                [self.load_transcriptome(os.path.join(sample_data_directory,
-                                                      self._PARENTAL_TX_FASTA_FILENAME_PATTERN.format(genome_name=genome_name)))
-                    for genome_name in [1,2]]
             self.annotations = \
                 [self.load_annotation(os.path.join(sample_data_directory,
                                                    self._PARENTAL_ANNOT_FILENAME_PATTERN.format(genome_name=genome_name)))
                     for genome_name in [1,2]]
             self.genomes = \
-                [self.load_genome(os.path.join(sample_data_directory,
-                                               self._PARENTAL_GENOME_FASTA_FILENAME_PATTERN.format(genome_name=genome_name)))
+                [read_fasta(os.path.join(sample_data_directory,
+                                           self._PARENTAL_GENOME_FASTA_FILENAME_PATTERN.format(genome_name=genome_name)),
+                            replace_Ns = True,
+                            rng = rng)
                     for genome_name in [1,2]]
 
             print('Loading indel information from both parental genomes.')
@@ -542,12 +452,11 @@ class MoleculeMakerStep(AbstractCampareeStep):
             # Read and load indel data for each parental genome. This information is
             # used when constructing CIGAR strings mapping transcripts back to their
             # locations in the original reference genome.
-            indel_data = \
-                [self.load_indels(os.path.join(sample_data_directory,
-                                               self._PARENTAL_GENOME_INDEL_FILENAME_PATTERN.format(genome_name=genome_name)))
-                    for genome_name in [1,2]]
-            self.indels = [indels for indels, offset_data in indel_data]
-            self.offset_data = [offset_data for indels, offset_data in indel_data]
+            self.genome_cigar_splits =  [self.load_indels(
+                                                os.path.join(sample_data_directory,
+                                                   self._PARENTAL_GENOME_INDEL_FILENAME_PATTERN.format(genome_name=genome_name)),
+                                               self.genomes[genome_name-1])
+                                            for genome_name in [1,2]]
 
             # Generate molecules and save/export them according to output type.
             print('Generating molecules and saving/exporting the results.')
@@ -559,7 +468,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
                 for i in range(1,num_packets+1):
                     print(f"    Generating packet {i} of {num_packets}")
                     log_file.write(f"    Generating packet {i} of {num_packets}\n")
-                    packet = self.make_packet(sample=sample, id=f"sample{sample.sample_id}.{i}", N=molecules_per_packet) #TODO: id needs to be an integer
+                    packet = self.make_packet(sample=sample, id=f"sample{sample.sample_id}.{i}", N=molecules_per_packet, rng=rng) #TODO: id needs to be an integer
 
                     molecule_packet_filename = os.path.join(sample_data_directory,
                                                             self.OUTPUT_FILENAME_PATTERN.format(output_type=output_type,
@@ -576,13 +485,14 @@ class MoleculeMakerStep(AbstractCampareeStep):
                 log_file.write(f"Generating molecule file {molecule_output_filename}.")
                 self.make_molecule_file(filepath=molecule_output_filename,
                                         N = output_molecule_count,
-                                        sample = sample)
+                                        sample = sample,
+                                        rng = rng)
             elif output_type == "generator":
                 def generator():
                     num_packets = output_molecule_count // molecules_per_packet
                     print(f"Generating {num_packets} packets")
                     for i in range(1, num_packets+1):
-                        packet = self.make_packet(sample=sample, id=i, N=molecules_per_packet)
+                        packet = self.make_packet(sample=sample, id=i, N=molecules_per_packet, rng=rng)
                         yield packet
                 return generator()
             else:
