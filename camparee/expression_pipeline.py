@@ -349,7 +349,7 @@ class ExpressionPipeline:
         resources_directory_path = resources.get('directory_path', None)
         if not resources_directory_path:
             resources_directory_path = os.path.join(CAMPAREE_CONSTANTS.CAMPAREE_ROOT_DIR, "resources")
-        elif not(os.path.exists(resources_directory_path) and os.path.isdir(resources_directory_path)):
+        elif not (os.path.exists(resources_directory_path) and os.path.isdir(resources_directory_path)):
             print(f"The given resources directory, {resources_directory_path}, must exist as a directory.",
                   file=sys.stderr)
             return False
@@ -357,27 +357,27 @@ class ExpressionPipeline:
         # Insure that the species model directory exists.  No point in continuing util this problem is
         # resolved.
         species_model_directory_path = os.path.join(resources_directory_path, resources['species_model'])
-        if not(os.path.exists(species_model_directory_path) and os.path.isdir(species_model_directory_path)):
+        if not (os.path.exists(species_model_directory_path) and os.path.isdir(species_model_directory_path)):
             print(f"The species model directory, {species_model_directory_path}, must exist as a directory",
                   file=sys.stderr)
             return False
 
         # Insure that the reference genome file path exists and points to a file.
         self.reference_genome_file_path = os.path.join(species_model_directory_path, resources['reference_genome_filename'])
-        if not(os.path.exists(self.reference_genome_file_path) and os.path.isfile(self.reference_genome_file_path)):
+        if not (os.path.exists(self.reference_genome_file_path) and os.path.isfile(self.reference_genome_file_path)):
             print(f"The reference genome file path, {self.reference_genome_file_path}, must exist as"
                   f" a file.", file=sys.stderr)
             valid = False
 
         # Insure that the chromosome ploidy file path exists and points to a file.
         self.chr_ploidy_file_path = os.path.join(species_model_directory_path, resources['chr_ploidy_filename'])
-        if not(os.path.exists(self.chr_ploidy_file_path) and os.path.isfile(self.chr_ploidy_file_path)):
+        if not (os.path.exists(self.chr_ploidy_file_path) and os.path.isfile(self.chr_ploidy_file_path)):
             print(f"The chr ploidy file path, {self.chr_ploidy_file_path} must exist as a file", file=sys.stderr)
             valid = False
 
         # Insure that the annotations file path exists and points to a file.
         self.annotation_file_path = os.path.join(species_model_directory_path, resources['annotation_filename'])
-        if not(os.path.exists(self.annotation_file_path) and os.path.isfile(self.annotation_file_path)):
+        if not (os.path.exists(self.annotation_file_path) and os.path.isfile(self.annotation_file_path)):
             print(f"The annotation file path, {self.annotation_file_path} must exist as a file", file=sys.stderr)
             valid = False
 
@@ -453,21 +453,34 @@ class ExpressionPipeline:
             #      on the same BAM file at the same time, though I don't know why this would be a problem.
 
         seed = seeds["VariantsCompilationStep"]
+        phased_output = False
+        # Can't phase variants with only one sample. Need VariantsCompilationStep
+        # output (alleles separated by "|", instead of "/") to follow phased format,
+        # since that's what the GenomeBuilderStep scripts can process.
+        if len(self.samples) == 1:
+            phased_output = True
         self.run_step(step_name='VariantsCompilationStep',
                       sample=None,
                       cmd_line_args=[[sample.sample_id for sample in self.samples],
                                      self.chr_ploidy_file_path,
-                                     self.reference_genome_file_path, seed],
+                                     self.reference_genome_file_path,
+                                     phased_output,
+                                     seed],
                       dependency_list=[f"VariantsFinderStep_{sample.sample_id}" for sample in self.samples])
 
         phased_vcf_file = self.optional_inputs['phased_vcf_file']
         # If user did not provide phased vcf file
         if phased_vcf_file is None:
-            seed = seeds["BeagleStep"]
-            self.run_step(step_name='BeagleStep',
-                          sample=None,
-                          cmd_line_args=[self.beagle_file_path, seed],
-                          dependency_list=["VariantsCompilationStep"])
+            # Can't phase variants with only one sample
+            if len(self.samples) == 1:
+                phased_vcf_file = os.path.join(self.data_directory_path,
+                                               CAMPAREE_CONSTANTS.VARIANTS_COMPILATION_OUTPUT_FILENAME)
+            else:
+                seed = seeds["BeagleStep"]
+                self.run_step(step_name='BeagleStep',
+                              sample=None,
+                              cmd_line_args=[self.beagle_file_path, seed],
+                              dependency_list=["VariantsCompilationStep"])
 
         #TODO: We could load all of the steps in the entire pipeline into the queue
         #      and then just have the queue keep running until everything finishes.
@@ -704,13 +717,12 @@ class ExpressionPipeline:
                                   f"{step_name}{f'-{jobname_suffix}' if jobname_suffix else ''}.{self.scheduler_mode}.err")
         scheduler_job_name = (f"{step_name}{f'_sample{sample.sample_id}_{sample.sample_name}' if sample else ''}"
                               f"{f'-{jobname_suffix}' if jobname_suffix else ''}")
-        scheduler_args = {'job_name' : scheduler_job_name,
-                          'stdout_logfile' : stdout_log,
-                          'stderr_logfile' : stderr_log,
-                          'num_processors' : scheduler_num_processors,
-                          'memory_in_mb' : scheduler_memory_in_mb,
-                          'additional_args' : scheduler_submission_args
-                         }
+        scheduler_args = {'job_name': scheduler_job_name,
+                          'stdout_logfile': stdout_log,
+                          'stderr_logfile': stderr_log,
+                          'num_processors': scheduler_num_processors,
+                          'memory_in_mb': scheduler_memory_in_mb,
+                          'additional_args': scheduler_submission_args}
         command = step_class.get_commandline_call(*cmd_line_args)
         validation_attributes = step_class.get_validation_attributes(*cmd_line_args)
         output_directory = os.path.join(step_class.data_directory_path,

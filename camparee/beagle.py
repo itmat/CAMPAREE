@@ -23,7 +23,7 @@ class BeagleStep(AbstractCampareeStep):
 
     #Beagle takes input from the VariantsCompilationStep. This will make sure the
     #input filename matches up with the name used by the VariantsCompilationStep.
-    BEAGLE_INTPUT_FILENAME = CAMPAREE_CONSTANTS.VARIANTS_COMPILATION_OUTPUT_FILENAME
+    BEAGLE_INPUT_FILENAME = CAMPAREE_CONSTANTS.VARIANTS_COMPILATION_OUTPUT_FILENAME
 
     #Name of file where script logging stored.
     BEAGLE_LOG_FILENAME = CAMPAREE_CONSTANTS.BEAGLE_LOG_FILENAME
@@ -57,7 +57,7 @@ class BeagleStep(AbstractCampareeStep):
             the same results.
 
         """
-        input_file_path = os.path.join(self.data_directory_path, BeagleStep.BEAGLE_INTPUT_FILENAME)
+        input_file_path = os.path.join(self.data_directory_path, BeagleStep.BEAGLE_INPUT_FILENAME)
         output_file_path = os.path.join(self.data_directory_path, BeagleStep.BEAGLE_OUTPUT_FILENAME)
         log_file_path = os.path.join(self.log_directory_path, BeagleStep.BEAGLE_LOG_FILENAME)
         command = f"java -jar {beagle_jar_path} gt={input_file_path} out={output_file_path}"
@@ -78,7 +78,7 @@ class BeagleStep(AbstractCampareeStep):
             try:
                 beagle_result = subprocess.run(command, shell=True, check=True,
                                                stdout=subprocess.PIPE,
-                                               stderr=subprocess.STDOUT, #Redirect stderr to stdout.
+                                               stderr=subprocess.STDOUT, # Redirect stderr to stdout.
                                                encoding="ascii")
             except subprocess.CalledProcessError as beagle_run_exception:
                 log_file.write("\n*****ERROR: Beagle command failed:\n")
@@ -90,9 +90,9 @@ class BeagleStep(AbstractCampareeStep):
                 raise CampareeException(f"\nBeagle process failed. "
                                         f"For full details see {log_file_path}\n")
 
-            print(f"Finished running Beagle.\n")
+            print("Finished running Beagle.\n")
             log_file.write(f"{beagle_result.stdout}\n")
-            log_file.write(f"\nFinished running Beagle.\n")
+            log_file.write("\nFinished running Beagle.\n")
             log_file.write("ALL DONE!\n")
 
     def get_commandline_call(self, beagle_jar_path, seed=None):
