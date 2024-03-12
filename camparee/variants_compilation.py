@@ -20,7 +20,7 @@ class VariantsCompilationStep(AbstractCampareeStep):
     def validate(self):
         return True
 
-    def execute(self, sample_id_list, chr_ploidy_data, reference_genome, seed=None):
+    def execute(self, sample_id_list, chr_ploidy_data, reference_genome, phased_output=False, seed=None):
         """
         Entry point into variants_compilation.
 
@@ -33,6 +33,10 @@ class VariantsCompilationStep(AbstractCampareeStep):
             ploidy as values.
         reference_genome : dict
             Dictionary representation of the reference genome
+        phased_output : bool
+            Change character used to separate alleles in VCF output.
+            True - "|" = alleles have known phases
+            False - "/" = alleles have unknown phases [default]
         seed : int
             Seed for random number generator. Used so repeated runs will produce
             the same results.
@@ -43,6 +47,10 @@ class VariantsCompilationStep(AbstractCampareeStep):
         log_file_path = os.path.join(self.log_directory_path,
                                      CAMPAREE_CONSTANTS.VARIANTS_COMPILATION_LOG_FILENAME)
 
+        allele_sep = "/"
+        if phased_output is True:
+            allele_sep = "|"
+
         # The common_variant() method defined below uses a random number when
         # choosing which of two equally prevalent variants to keep.
         if seed is not None:
@@ -51,6 +59,8 @@ class VariantsCompilationStep(AbstractCampareeStep):
         with open(log_file_path, "w") as log_file:
             print("Converting variants into vcf file")
             log_file.write("Converting variants into vcf file\n")
+            if phased_output is True:
+                log_file.write("Output formatted as phased alleles.\n")
             contigs_so_far = []
             last_chromosome = None
             # Open then process all the files
@@ -127,7 +137,7 @@ class VariantsCompilationStep(AbstractCampareeStep):
                     most_common_variants = [common_variant(vars) for vars in variants]
 
                     # Output nothing if we've now discarded all the variants
-                    if all(var == None for var in most_common_variants):
+                    if all(var is None for var in most_common_variants):
                         next_lines = [line if not used else sample_file.readline()
                                       for line, used, sample_file in zip(next_lines, used_samples, variant_files)]
                         continue
@@ -156,7 +166,7 @@ class VariantsCompilationStep(AbstractCampareeStep):
                     alts = []
                     for variant, num_vars in zip(most_common_variants, num_variants):
                         if variant is None:
-                            sample_descriptions.append("0/0")  # ref-ref if no variants for this sample
+                            sample_descriptions.append(f"0{allele_sep}0")  # ref-ref if no variants for this sample
                             continue
 
                         # With deletions, include one extra base
@@ -189,9 +199,9 @@ class VariantsCompilationStep(AbstractCampareeStep):
                         # and the most common alt as the other
                         # TODO: should we ever use alt-alt with two different alts? we don't currently
                         if num_vars == 1:
-                            sample_descriptions.append(f"{idx}/{idx}")  # alt-alt
+                            sample_descriptions.append(f"{idx}{allele_sep}{idx}")  # alt-alt
                         else:
-                            sample_descriptions.append(f"0/{idx}")  # ref-alt
+                            sample_descriptions.append(f"0{allele_sep}{idx}")  # ref-alt
 
                     line = "\t".join([chromosome,
                                       str(position),
@@ -214,7 +224,7 @@ class VariantsCompilationStep(AbstractCampareeStep):
             log_file.write(f"Finished creating VCF file for Beagle with {i} variant entries\n")
             log_file.write("ALL DONE!\n")
 
-    def get_commandline_call(self, samples, chr_ploidy_file_path, reference_genome_file_path, seed=None):
+    def get_commandline_call(self, samples, chr_ploidy_file_path, reference_genome_file_path, phased_output=False, seed=None):
         """
         Prepare command to execute the VariantsCompilationStep from the command
         line, given all of the arugments used to run the execute() function.
@@ -228,6 +238,10 @@ class VariantsCompilationStep(AbstractCampareeStep):
             File that maps chromosome names to their male/female ploidy.
         reference_genome_file_path : string
             File that maps chromosome names in reference to nucleotide sequence.
+        phased_output : bool
+            Change character used to separate alleles in VCF output.
+            True - "|" = alleles have known phases
+            False - "/" = alleles have unknown phases [default]
         seed : integer
             Seed for random number generator. Used so repeated runs will produce
             the same results.
@@ -250,14 +264,15 @@ class VariantsCompilationStep(AbstractCampareeStep):
                    f" --data_directory_path {self.data_directory_path}"
                    f" --sample_ids '{json.dumps(samples)}'"
                    f" --chr_ploidy_file_path {chr_ploidy_file_path}"
-                   f" --reference_genome_file_path {reference_genome_file_path}")
+                   f" --reference_genome_file_path {reference_genome_file_path}"
+                   f" --phased_output {phased_output}")
 
         if seed is not None:
             command += f" --seed {seed}"
 
         return command
 
-    def get_validation_attributes(self, samples, chr_ploidy_file_path, reference_genome_file_path, seed=None):
+    def get_validation_attributes(self, samples, chr_ploidy_file_path, reference_genome_file_path, phased_output=False, seed=None):
         """
         Prepare attributes required by is_output_valid() function to validate
         output generated the VariantsCompilationStep job.
@@ -278,6 +293,10 @@ class VariantsCompilationStep(AbstractCampareeStep):
             [Note: this parameter is captured just so get_validation_attributes()
             accepts the same arguments as get_commandline_call(). It is not used
             here.]
+        phased_output : bool
+            Change character used to separate alleles in VCF output. [Note: this
+            parameter is captured just so get_validation_attributes() accepts
+            the same arguments as get_commandline_call(). It is not used here.]
         seed : integer
             Seed for random number generator. Used so repeated runs will produce
             the same results. [Note: this parameter is captured just so
@@ -309,6 +328,7 @@ class VariantsCompilationStep(AbstractCampareeStep):
         parser.add_argument('--sample_ids')
         parser.add_argument('--chr_ploidy_file_path')
         parser.add_argument('--reference_genome_file_path')
+        parser.add_argument('--phased_output', type=bool, default=False)
         parser.add_argument('--seed', type=int, default=None)
         args = parser.parse_args()
 
@@ -320,6 +340,7 @@ class VariantsCompilationStep(AbstractCampareeStep):
         variants_compiler.execute(sample_id_list,
                                   chr_ploidy_data,
                                   reference_genome,
+                                  args.phased_output,
                                   args.seed)
 
     @staticmethod

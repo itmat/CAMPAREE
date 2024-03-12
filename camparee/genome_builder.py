@@ -148,7 +148,7 @@ class GenomeBuilderStep(AbstractCampareeStep):
                 elif line[0:2] == "##":
                     continue
                 else:
-                    raise CampareeException(f"No sample data found.")
+                    raise CampareeException("No sample data found.")
         return sample_index
 
     def execute(self, sample, phased_vcf_file_path, chr_ploidy_data, reference_genome, chromosome_list=None):

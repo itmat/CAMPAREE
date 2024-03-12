@@ -12,7 +12,7 @@ Command Line Options
     usage: run_camparee.py [-h] -c CONFIG [-r RUN_ID] [-d] [-m {lsf,serial,sge}]
                            [-s SEED]
 
-    CAMPAREE - RNA molecule simulator (v0.4.0)
+    CAMPAREE - RNA molecule simulator (v0.4.1)
 
     optional arguments:
       -h, --help            show this help message and exit

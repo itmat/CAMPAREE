@@ -147,4 +147,4 @@ CAMPAREE_CONSTANTS = \
                       MOLECULE_MAKER_LOG_FILENAME="MoleculeMakerStep.log"
                       )
 
-CAMPAREE_VERSION="0.4.0"
+CAMPAREE_VERSION="0.4.1"
