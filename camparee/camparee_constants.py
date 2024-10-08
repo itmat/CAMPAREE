@@ -51,7 +51,7 @@ These include input/output/logging filenames used by various
 steps in the pipeline.
 """
 
-_CAMPAREE_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_CAMPAREE_ROOT_DIR = "/CAMPAREE"
 # The following variables are used to add prefixes to string patterns defined
 # in the namedtuple below.
 _DEFAULT_STAR_OUTPUT_PREFIX="genome_alignment."
