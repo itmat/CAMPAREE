@@ -1,0 +1,13 @@
+name: Insert Workflow Version Snapshot
+
+on:
+    workflow_run:
+      workflows: ["Update Version and Create Tag"]
+      branches: [main, develop]
+      types:
+        - completed
+      
+
+jobs:
+  update-workflow-snapshot:
+    uses: envisagenics/github-reusable-workflows/.github/workflows/insert-workflow-version-record.yaml@develop

@@ -1,0 +1,16 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'Dockerfile'
+      
+jobs:
+  deploy-image:
+    uses: envisagenics/github-reusable-workflows/.github/workflows/deploy-docker-image-workflow.yaml@develop
+    secrets: inherit
+    with:
+      BUILD_DIRECTORY: .
+      VERSION_FILE: config.yaml

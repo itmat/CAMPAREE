@@ -1,0 +1,42 @@
+---
+job_name: camparee
+job_resources:
+- storage_account: SPLICEPREP:STORAGEHOT
+  container: misc-resources
+  prefix:
+  - camparee
+repository: null
+docker_image: "camparee"
+docker_tag: "1.0.3"
+custom_parameters:
+- name: dataset_id
+  description: Name for dataset and blob storage directory. diseasearea-projectid-YYMM format.
+  required: true
+- name: dataset_version
+  description: Dataset version, used for blob storage directory. Integer value starting at 1.
+  required: true
+tasks:
+- task_name: camparee
+  use_id_file: true
+  auto_hash_id: true
+  retention: 10
+  max_parallel_tasks: 1
+  max_task_retry_count: 0
+  command: bash main.sh -i ${hashed_id}
+  output:
+    blob_storage:
+      - storage_account: SPLICEPREP:STORAGEHOT
+        container: camparee/${dataset_id}/${dataset_version}
+        files:
+        - "${hashed_id}_molecule_file.txt"
+      - storage_account: SPLICEPREP:STORAGEHOT
+        container: logs/camparee/${dataset_id}/${dataset_version}
+        files:
+        - "log_${hashed_id}.*.txt"
+  task_resources:
+    blob_storage:
+      - storage_account: SPLICEPREP:STORAGETRIM
+        container: qctrim
+        prefix:
+        - "${dataset_id}/${dataset_version}/${hashed_id}"
+  depends_on: []

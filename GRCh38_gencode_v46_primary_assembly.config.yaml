@@ -1,0 +1,303 @@
+# Configuration File for CAMPAREE (v0.4.1)
+# See baby.config.yaml for an example of a fully specified config file.
+# Everything listed below is required, except for those labeled [OPTIONAL].
+# To remove optional arguments, they can be commented out by placing a "#"
+# at the beginning of the line.
+
+### General attributes for running CAMPAREE
+setup:
+    # Alpha-numeric ID (including underscores) assigned to the CAMPAREE run.
+    # Used to name output directories. If specified on command line with the
+    # "-r" argument, it will override the value here.
+    run_id: 1
+
+    # [OPTIONAL] Integer value used to see random number generator used in
+    # various CAMPAREE steps. Used for reproducibility.
+    seed: 100
+
+    # The method used to submit jobs for processing. If specified on command
+    # line with the "-m" argument, it will override the value here. Currently
+    # supports "serial" (single-core), "lsf" (distributed LSF system), "sge"
+    # (distributed SGE system), and "batch" (AWS batch). Case-sensitive.
+    # Other modes may be added in later releases.
+    scheduler_mode: serial
+
+    # [OPTIONAL] Specify the number of processors and the amount of RAM (in Mb)
+    # the scheduler should request by default when submitting jobs. These values
+    # are ignored if the scheduler_mode is set to "serial". The values specified
+    # here can also be overridden for specific steps in the pipeline that may
+    # require more/fewer resources than the default values. See the "steps"
+    # sections of this config file for further details.
+    default_scheduler_parameters:
+        default_num_processors: 1
+        default_memory_in_mb: 6000
+        # Specify any additional arguments to provide to the scheduler when
+        # submitting the job. This will not be needed in most cases and is
+        # supported to give advanced users greater control over the submission
+        # commands.
+        default_submission_args:
+
+    # [OPTIONAL] The maximum number of times a failed job/step will attempt
+    # to repeat before the entire CAMPAREE run halts. This must be an integer
+    # greater than or equal to 0. A value of 0 for this parameter means
+    # CAMPAREE will not attempt to resubmit failed jobs before halting.
+    # [DEFAULT: 3]
+    job_resub_limit: 3
+
+### System locations for genome annotation resources used by CAMPAREE
+# See https://camparee.readthedocs.io/en/latest/resource_files.html for detailed
+# information about the organization of the CAMPAREE resources directory.
+resources:
+    # [OPTIONAL] Path to upper-level directory containing genome sequence,
+    # annotation info, and STAR index directory. If not provided, defaults to
+    # resources directory contained in the CAMPAREE install directory.
+    directory_path:
+
+    # Alpha-numeric (including underscores and periods) name of organism and
+    # genome/annotation version. Used as sub-directory to the resources path.
+    species_model: GRCh38_gencode_v46_primary_assembly
+
+    # Sub-directory name containing STAR index files This index must be built
+    # using a version of STAR compatible with v2.5.2a. Also, the chromosome
+    # names used in the index must match those used by the reference FASTA and
+    # annotation files below.
+    star_genome_index_directory_name: star_index.genome
+
+    # FASTA file containing complete genome sequence. Each chromosome sequence
+    # must be on a single line. To generate files in this format from multi-line
+    # FASTA files, use the bin/format_reference_files_for_camparee.py utility
+    # script. If ends in ".gz", will be treated as a gzipped file.
+    reference_genome_filename: GRCh38_gencode_v46_primary_assembly.oneline_seqs.fa
+
+    # File containing coordinates for each transcript in the annotation. This
+    # file can be built from a GTF using the bin/format_reference_files_for_camparee.py
+    # script. Chromosome names in this file must match those used in the reference
+    # genome FASTA.
+    annotation_filename: GRCh38_gencode_v46_primary_assembly.annotation.txt
+
+    # File containing a list of chromosome names and the number of homologous
+    # copies for each gender in the species. Chromosome names must match those
+    # in the reference genome FASTA and annotation files, but may be a subset.
+    # Only the chromosomes specified in this file are used to generate
+    # simulated transcripts. See
+    # $https://camparee.readthedocs.io/en/latest/resource_files.html#chromosome-ploidy-file
+    # for full details on how to create ploidy file, and how it is used. The
+    # bin/format_reference_files_for_camparee.py script also has the option to
+    # create a started ploidy file that will need to be edited to account for
+    # non-diploid organisms and non-autosomal chromosomes.
+    chr_ploidy_filename: GRCh38_gencode_v46_primary_assembly.chr_ploidy.txt
+
+### Information concerning input samples
+input:
+    # Path to directory containing FASTQ files for all samples.
+    fastq_directory_path:
+    # [OPTIONAL] Path to directory containing BAM files for all samples. Note,
+    # BAM files are only read from here. If CAMPAREE performs the alignment,
+    # the resulting BAM files are saved to the output directory (specified
+    # below).
+    #bam_directory_path: /path/to/BAM/files/
+
+    ### Optional input files used across all samples
+    # While CAMPAREE will infer/phase genetic variants, and estimate various
+    # empirical distributions from the input data, users have the option to
+    # specify their own versions of these data. This section of the config file
+    # is where users direct CAMPAREE to the locations of the files containing
+    # pre-computed data/distributions prepared by the user. Each entry below
+    # will describe the type and/or format of the file CAMPAREE requires to use
+    # the optional input. Specifying these optional inputs may skip associated
+    # steps in the CAMPAREE pipeline (e.g. CAMPAREE will not repeat genotype
+    # phasing if provided with a phased vcf file). Lastly, as the name of this
+    # section implies, all entries here are optional.
+    optional_inputs:
+        # [OPTIONAL] Path to directory containing BAM files for all samples. Note,
+        # BAM files are only read from here. If CAMPAREE performs the alignment,
+        # the resulting BAM files are saved to the output directory (specified
+        # below).
+        #bam_directory_path: /path/to/BAM/files/
+        # [OPTIONAL] VCF file containing phased genotypes for each sample. The
+        # sample genotype columns must use the same names as the samples they
+        # correspond to (e.g. sample1, sample2, etc.). The format of this input
+        # file is not currently checked to make sure it matches beagle output
+        # exactly. We plan to add checks of the VCF file's format in future
+        # releases of CAMPAREE. Lastly, the VCF file will be treated as
+        # gzipped if its name ends with '.gz'.
+        #phased_vcf_file: /path/to/phased_vcf_file.
+
+    ### Per-sample information (input files, attributes)
+    data:
+
+### Output directory and parameters
+output:
+    # Path to upper-level directory in which all CAMPAREE output will be saved.
+    directory_path:
+    # The format of the CAMPAREE molecule output. Should be either 'file' or
+    # 'packet'.
+    # file: creates a raw text file of the molecules, their source locations on
+    #       the parental and reference genomes, and the CIGAR strings mapping the
+    #       molecules on the parental and reference genomes.
+    # packet: A binary file of molecule information suitable for use by the BEERS2
+    #         simulator. This file is currently pickled, but this is likely to
+    #         change.
+    type: file
+    # Simulate the default number of RNA transcript molecules for all samples
+    # and ignore the sample-specific molecule counts.
+    override_sample_molecule_count: False
+    # Number of RNA transcript molecules to simulate for samples where no sample-
+    # specific molecule count is provided, or if 'override_sample_molecule_count'
+    # is set to 'True'.
+    default_molecule_count: 50000
+    # Parameters that control the generated molecules
+    parameters:
+        # Determine the min and max length of a polyA tail to
+        # add to the created molecules. Length is chosen uniformly
+        # between the two values.
+        min_polyA_tail_length: 50
+        max_polyA_tail_length: 250
+    # [OPTIONAL] When generating molecules, override the default parameters the
+    # scheduler uses to submit jobs. When generating transcipts from larger
+    # genomes and complex transcriptomes, the molecule maker may require more
+    # RAM than the default scheduler parameters. Please note, these values are
+    # ignored when the scheduler_mode is set to "serial".
+    scheduler_parameters:
+        # For a mammalian-sized genome, 8GB of RAM should be sufficient to
+        # generate molecules, in most cases.
+        memory_in_mb: 8000
+
+### Configuration of individual steps in the CAMPAREE pipeline
+# CAMPAREE uses this list to assemble all of its pipeline components. Therefore,
+# All steps used in the CAMPAREE pipeline *MUST* be listed here, even if they do
+# not require any specialized run parameters. While users may wish to tweak the
+# run parameters for the various steps listed below, the names of the steps
+# should not be changed or removed. If any of the steps require resources (i.e.
+# number of processors/cores, RAM) from the job scheduler that differ from the
+# defaults, users may specify these for each step, as needed.
+steps:
+    # Align FASTQ files to reference genome using STAR v2.5.2a. Output alignments
+    # in BAM format, sorted by chromosome coordinate. Note that while this step
+    # is skipped if the user provides BAM files, this entry should not be removed
+    # from the config file.
+    'genome_alignment.GenomeAlignmentStep':
+        # [OPTIONAL] Parameters to pass on to STAR for the genome alignment.
+        parameters:
+            # The number of threads to us when running STAR. Increasing this
+            # number may increase the speed of STAR alignments. This value should
+            # match the number of processors the scheduler requests when submitting
+            # the STAR job. If omitted, STAR uses 1 thread.
+            '--runThreadN': 30
+            # This is needed if the input FASTQ files are gzipped.
+            '--readFilesCommand': zcat
+        # [OPTIONAL] For this step, override the default parameters the scheduler
+        # uses to submit jobs. STAR alignment is often resource intensive, requiring
+        # more resources than the other steps in the CAMPAREE pipeline. These values
+        # are ignored if the scheduler_mode is set to "serial".
+        scheduler_parameters:
+            # STAR support multi-threading to improve alignment speed. This value
+            # should match the number given the the '--runThreadN' argument above.
+            num_processors: 30
+            # For a mammalian-sized genome, STAR requires 30-40 GB of RAM. Adjust
+            # this number according to the size of your organism's STAR index.
+            memory_in_mb: 40000
+    # Index genome-aligned BAM files using pysam.
+    'genome_alignment.GenomeBamIndexStep':
+    # Quantify intron-mapping reads counts from the genome-aligned BAM. This
+    # step requires data generated from a strand-specific, paired-end protocol.
+    'intron_quant.IntronQuantificationStep':
+        parameters:
+            # Read (forward or reverse) used to determine strand of aligned
+            # fragment. If set to true, strand information is taken from the
+            # forward read. [DEFAULT] If set to false, strand information is taken
+            # from the reverse read. The latter is used for dUTP-based protocols,
+            # like the Illumina TruSeq Stranded kits.
+            forward_read_is_sense: false
+            flank_size: 1500
+    # Identify variants that differ from the reference genome from the genome-
+    # aligned reads. This step is skipped for samples where 'pooled' is set to
+    # 'True'.
+    'variants_finder.VariantsFinderStep':
+         parameters:
+             sort_by_entropy: false
+             min_threshold: 0.03
+         # [OPTIONAL] The VariantsFinderStep step can be memory intensive for
+         # mammalian-sized genomes, requiring additional RAM.
+         scheduler_parameters:
+             memory_in_mb: 12000
+    # Merge variants identified in each sample into a single VCF file. This step
+    # is skipped for samples where 'pooled' is set to 'True'.
+    'variants_compilation.VariantsCompilationStep':
+    # Determine phasing for variants identified from the input samples. Note,
+    # this step requires at least two input samples to perform phasing. This step
+    # is skipped for samples where 'pooled' is set to 'True'.
+    'beagle.BeagleStep':
+        parameters:
+            # Force Beagle to run with a single thread (by default it uses the
+            # system's settings to determine the number of threads). This avoids
+            # memory allocation errors arising from conflicts with glibc, java,
+            # and multiple threads on some SGE systems.
+            nthreads: 30
+    # Build parental genome sequences based on the variants identified from the
+    # input samples. This step is skipped for samples where 'pooled' is set to
+    # 'True'.
+    'genome_builder.GenomeBuilderStep':
+        parameters:
+            # If set to 'True', no INDEL variants are used to construct the
+            # parental genomes. [DEFAULT] If set to 'False', INDEL variants
+            # identified from the input data are used to construct parental
+            # genomes.
+            ignore_indels: false
+            # If set to 'True', no SNP variants are used to construct the
+            # parental genomes. [DEFAULT] if set to 'True', SNP variants
+            # identified from the input data are used to construct parental
+            # genomes.
+            ignore_snps: false
+    # Update transcript annotation coordinates to reflect changes made when
+    # constructing each parental genome sequence.
+    'update_annotation_for_genome.UpdateAnnotationForGenomeStep':
+    # Prepare transcriptome sequence given a parental genome sequence and the
+    # associated annotation.
+    'transcriptome_fasta_preparation.TranscriptomeFastaPreparationStep':
+    # Build kallisto (v0.45.0) transcriptome index from a transcriptome sequence.
+    'kallisto.KallistoIndexStep':
+    # Use kallisto (v0.45.0) to generate transcript-level quantification for the
+    # parental transcriptome from the input FASTQ files.
+    'kallisto.KallistoQuantStep':
+    # Build Bowtie2 (v2.3.4.3) transcriptome index from a transcriptome sequence.
+    'bowtie2.Bowtie2IndexStep':
+        parameters:
+            # [OPTIONAL] Number of CPU threads to use when running bowtie2 to
+            # build transcriptome indexes. This value should match the number of
+            # processors requested in the scheduler parameters below. [DEFAULT: 1]
+            num_bowtie_threads: 30
+        # [OPTIONAL] The bowtie2 steps can be memory intensive and tend to
+        # require additional RAM and processor resources.
+        scheduler_parameters:
+            # This value should match the number given to the 'num_bowtie_threads'
+            # parameter above.
+            num_processors: 30
+            memory_in_mb: 40000
+    # Align FASTQ files to a parental transcriptome using Bowtie2 (v2.3.4.3).
+    'bowtie2.Bowtie2AlignStep':
+        parameters:
+            # [OPTIONAL] Number of CPU threads to use when running bowtie2
+            # transcriptome alignments. This value should match the number of
+            # processors requested in the scheduler parameters below. [DEFAULT: 1]
+            num_bowtie_threads: 30
+        # [OPTIONAL] The bowtie2 steps can be memory intensive and tend to
+        # require additional RAM and processor resources.
+        scheduler_parameters:
+            # This value should match the number given to the 'num_bowtie_threads'
+            # parameter above.
+            num_processors: 30
+            memory_in_mb: 40000
+    # Generate gene, transcript, and PSI value distributions from the kallisto
+    # quantification results of both parental genomes/transcriptomes.
+    'transcript_gene_quant.TranscriptGeneQuantificationStep':
+    # Generate distribution of allelic imbalance from the Bowtie2 transcriptome
+    # alignments to both parental genomes/transcriptomes. This step also uses
+    # the reference genome alignments generated by the GenomeAlignmentStep, or
+    # provided by the user.
+    'allelic_imbalance_quant.AllelicImbalanceQuantificationStep':
+        # [OPTIONAL] The AllelicImbalanceQuantificationStep step can be memory
+        # intensive for samples with a high number of aligned reads, requiring
+        # additional RAM.
+        scheduler_parameters:
+            memory_in_mb: 56000

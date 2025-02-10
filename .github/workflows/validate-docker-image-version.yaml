@@ -1,0 +1,16 @@
+name: Validate docker image name and version combination does not exist
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'Dockerfile'
+
+jobs:
+  validate-image-version:
+    uses: envisagenics/github-reusable-workflows/.github/workflows/validate-docker-image-version-PR.yaml@main
+    secrets: inherit
+    with:
+      BUILD_DIRECTORY: .
+      VERSION_FILE: config.yaml

@@ -1,0 +1,21 @@
+name: Update Version and Create Tag
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths-ignore:
+      - "**/pyproject.toml"
+    tags-ignore:
+      - "*"
+
+env:
+  PYTHON_VERSION: "3.10"
+  POETRY_LOCATION: "./"
+
+jobs:
+  prepare_and_tag:
+    uses: envisagenics/github-reusable-workflows/.github/workflows/update-tag.yaml@develop
+    secrets: inherit
+    
