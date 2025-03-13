@@ -227,7 +227,7 @@ class CampareeController:
             return False
 
         # Iterate over the input samples
-        for input_sample in self.configuration["input"]["data"].values():
+        for sample_name, input_sample in self.configuration["input"]["data"].items():
 
             # Validate sample FASTQ files
             if "fastq_files" not in input_sample:
@@ -249,11 +249,11 @@ class CampareeController:
             if gender:
                 gender = gender.lower()
                 if gender not in [CONSTANTS.MALE_GENDER, CONSTANTS.FEMALE_GENDER]:
-                    print(f"The gender, {gender}, for input sample {input_sample['filename']} must be either"
+                    print(f"The gender, {gender}, for input sample {sample_name} must be either"
                           f" {CONSTANTS.MALE_GENDER}, {CONSTANTS.FEMALE_GENDER} or not present.", file=sys.stderr)
                     valid = False
             else:
-                print(f"The input sample, {input_sample['filenames']} has no gender specified.  Consequently, no"
+                print(f"The input sample {sample_name} has no gender specified.  Consequently, no"
                       f" gender specific chromosomes will be processed for this sample.")
 
             # Validate whether sample is pooled.  This is required.
@@ -315,7 +315,6 @@ class CampareeController:
         # molecule packets, we could postpone this step until when that assembly occurs.  But we don't want to
         # make the addition to thousands of molecule packets after the fact.
         for sample_name, input_sample in self.configuration["input"]["data"].items():
-            #sample_name = os.path.splitext(input_sample["filenames"][0])[0]
             fastq_file_paths = [os.path.join(fastq_directory_path, filename)
                                        for filename in input_sample["fastq_files"]]
             bam_file_path = ''
