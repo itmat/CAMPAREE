@@ -29,8 +29,12 @@ resources/baby_genome.mm10/*
 # Ignore any results generated in the test_data/ directory as part of validating
 # the CAMPAREE installation, but keep track of the gzipped fastq files for the
 # baby genome.
+test_data/*
+!test_data/results
 test_data/results/*
-!test_data/fastq_files/*.fq.gz
+!test_data/fastq_files
+test_data/fastq_files/*
+!test_data/fastq_files/Test_Sample_*.fq.gz
 
 # Ignore document build files
 doc/_build/*
