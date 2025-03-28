@@ -7,6 +7,7 @@ import os
 import sys
 import traceback
 import string
+import pathlib
 from datetime import datetime
 from camparee.camparee_constants import CAMPAREE_CONSTANTS,CAMPAREE_VERSION
 from beers_utils.constants import CONSTANTS,SUPPORTED_SCHEDULER_MODES
@@ -214,7 +215,8 @@ class CampareeController:
             print("The mapping 'fastq_directory_path' under 'input' must be present in the configuration file",
                   file=sys.stderr)
             return False
-        fastq_input_directory_path = self.configuration["input"]["fastq_directory_path"]
+        baby_genome_fastq = pathlib.Path(CAMPAREE_CONSTANTS.CAMPAREE_ROOT_DIR) / "test_data" / "fastq_files"
+        fastq_input_directory_path = self.configuration["input"]["fastq_directory_path"] or baby_genome_fastq
 
         # BAM directory path and BAM files are optional
         bam_directory_path = None
@@ -303,7 +305,8 @@ class CampareeController:
         or may not be provided in the configuration data.  If not set, the gender will be inferred by the expression
         pipeline.
         """
-        fastq_directory_path = self.configuration["input"]["fastq_directory_path"]
+        baby_genome_fastq = pathlib.Path(CAMPAREE_CONSTANTS.CAMPAREE_ROOT_DIR) / "test_data" / "fastq_files"
+        fastq_directory_path = self.configuration["input"]["fastq_directory_path"] or baby_genome_fastq
         # BAM directory path and BAM files are optional
         bam_directory_path = None
         if self.configuration["input"]["optional_inputs"] is not None:

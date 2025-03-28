@@ -99,7 +99,8 @@ resources:
 input:
     # Path to directory containing FASTQ files for all samples. Fastq files for
     # the baby genome dataset are packaged in the CAMPAREE install directory.
-    fastq_directory_path: test_data/fastq_files/
+    # If not provided, defaults to the CAMPAREE test_data/fastq_files directory for examples
+    fastq_directory_path:
 
     ### Optional input files used across all samples
     # While CAMPAREE will infer/phase genetic variants, and estimate various
