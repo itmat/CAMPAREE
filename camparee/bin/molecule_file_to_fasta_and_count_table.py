@@ -179,40 +179,39 @@ class MoleculeFileToFastaAndCountTable():
 
         return trimmed_sequence, trimmed_cigar
 
-    @staticmethod
-    def main():
-        """Entry point into script when called directly.
+def main():
+    """Entry point into script when called directly.
 
-        Parses arguments, gathers input and output filenames, and calls methods
-        that perform the actual operation.
+    Parses arguments, gathers input and output filenames, and calls methods
+    that perform the actual operation.
 
-        """
-        parser = argparse.ArgumentParser(description='Create transcriptome FASTA and'
-                                                     ' count table from a CAMPAREE molecule file')
-        parser.add_argument('-i', '--input_molecule_file', required=True,
-                            help="Path to the molecule file.")
-        parser.add_argument('-o', '--output_directory', required=True,
-                            help="Path to output directory. FASTA and count table"
-                                 " will be saved here.")
-        parser.add_argument('-p', '--output_prefix', required=False, default="",
-                            help="Prefix to add to all output files.")
-        parser.add_argument('-s', '--separate_by_parent', action='store_true',
-                            help="Generate separate FASTA and count table files for"
-                                 " molecules from each parental genome. Assumes transcript"
-                                 " IDs in molecule file have _1/_2 suffixes to identify the"
-                                 " source parent.")
-        parser.add_argument('-t', '--trim_polya_tails', action='store_true',
-                            help="Trim polyA tails from the molecules before returning the"
-                                 " FASTA. Tail length determined by soft-clipping at the end"
-                                 " of the molecule CIGAR string.")
+    """
+    parser = argparse.ArgumentParser(description='Create transcriptome FASTA and'
+                                                    ' count table from a CAMPAREE molecule file')
+    parser.add_argument('-i', '--input_molecule_file', required=True,
+                        help="Path to the molecule file.")
+    parser.add_argument('-o', '--output_directory', required=True,
+                        help="Path to output directory. FASTA and count table"
+                                " will be saved here.")
+    parser.add_argument('-p', '--output_prefix', required=False, default="",
+                        help="Prefix to add to all output files.")
+    parser.add_argument('-s', '--separate_by_parent', action='store_true',
+                        help="Generate separate FASTA and count table files for"
+                                " molecules from each parental genome. Assumes transcript"
+                                " IDs in molecule file have _1/_2 suffixes to identify the"
+                                " source parent.")
+    parser.add_argument('-t', '--trim_polya_tails', action='store_true',
+                        help="Trim polyA tails from the molecules before returning the"
+                                " FASTA. Tail length determined by soft-clipping at the end"
+                                " of the molecule CIGAR string.")
 
-        args = parser.parse_args()
+    args = parser.parse_args()
 
-        molecule_file_converter = MoleculeFileToFastaAndCountTable(molecule_file=args.input_molecule_file,
-                                                                   output_directory=args.output_directory)
-        molecule_file_converter.execute(output_prefix=args.output_prefix,
-                                        separate_by_parent=args.separate_by_parent,
-                                        trim_polya_tails=args.trim_polya_tails)
+    molecule_file_converter = MoleculeFileToFastaAndCountTable(molecule_file=args.input_molecule_file,
+                                                                output_directory=args.output_directory)
+    molecule_file_converter.execute(output_prefix=args.output_prefix,
+                                    separate_by_parent=args.separate_by_parent,
+                                    trim_polya_tails=args.trim_polya_tails)
 
 if __name__ == '__main__':
-    sys.exit(MoleculeFileToFastaAndCountTable.main())
+    sys.exit(main())

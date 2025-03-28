@@ -9,6 +9,7 @@ version = "0.4.2"
 description = "Configurable And Modular Program Allowing RNA Expression Emulation"
 requires-python = ">=3.11"
 dependencies = [
+    "beers_utils @ git+https://github.com/itmat/BEERS_UTILS@4729697ae4128e5f40dfec0ea5a3e3503098de13",
     "numpy==1.24.2",
     "roman==4.0",
     "pysam==0.20.0",
@@ -20,10 +21,12 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["camparee"]
-package-data.camparee = ["third_party_software/**", "resources/**"]
+package-data.camparee = ["third_party_software/**", "resources/**", "bin/**", "test_data/**"]
 
-#[project.scripts]
-#beers = "beers.scripts.run_beers:main"
+[project.scripts]
+camparee = "camparee.bin.run_camparee:main"
+create_star_index_for_baby_genome = "camparee.bin.create_star_index_for_baby_genome:main"
+molecule_file_to_fasta_and_count_table = "camparee.bin.molecule_file_to_fasta_and_count_table:main"
 
 [project.optional-dependencies]
 dev = ["black", "pytest", "Sphinx~=6.2.1", "sphinx-rtd-theme", "mypy"]
