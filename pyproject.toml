@@ -1,0 +1,29 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools", "wheel"]
+
+
+[project]
+name = "CAMPAREE"
+version = "0.4.2"
+description = "Configurable And Modular Program Allowing RNA Expression Emulation"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy==1.24.2",
+    "roman==4.0",
+    "pysam==0.20.0",
+    "pandas==1.5.3",
+    "termcolor==2.2.0",
+    "prettytable==3.6.0",
+    "PyYAML==6.0",
+]
+
+[tool.setuptools]
+packages = ["camparee"]
+package-data.camparee = ["third_party_software/**", "resources/**"]
+
+#[project.scripts]
+#beers = "beers.scripts.run_beers:main"
+
+[project.optional-dependencies]
+dev = ["black", "pytest", "Sphinx~=6.2.1", "sphinx-rtd-theme", "mypy"]
