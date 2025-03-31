@@ -1,6 +1,6 @@
-# This bash script uses the STAR executable packaged with CAMPAREE to create
+# This script uses the STAR executable packaged with CAMPAREE to create
 # a STAR index for the baby genome. This index is created in the
-# resources/baby_genome.mm10/star_index.genome/ directory in the CAMPAREE
+# resources/baby_genome.mm10/star_index.genome/ directory in the CAMPAREE install
 # path.
 
 import pathlib

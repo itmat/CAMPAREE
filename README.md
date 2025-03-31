@@ -53,7 +53,7 @@ If you have not already done so for installation, activate the python environmen
 The default config file for the baby genome has CAMPAREE run all operations serially on a single machine.
 To perform the test run with these defaults, first download the config file and then run CAMPAREE with it:
 
-    wget https://raw.githubusercontent.com/itmat/CAMPAREE/refs/heads/main/config/baby.config.yaml
+    create_camparee_baby_config
     camparee --config baby.config.yaml --run_id 1
 
 The argument `--run_id 1` indicates that the run number is 1.
