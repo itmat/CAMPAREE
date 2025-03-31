@@ -20,7 +20,7 @@ This guide will walk you through basic installation and usage of CAMPAREE runnin
 
 Make sure you have the following installed on your system:
 
-- python version 3.13
+- python version 3.11
 - Java 1.8
 
 Create a Python virtual environment to install required Python libraries to:
