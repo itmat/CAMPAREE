@@ -39,21 +39,19 @@ Install required libraries:
 
 The "baby genome" is a truncated version of mm10 consisting of segments of length at most 1 million bases chosen from chromosomes 1, 2, 3, X, Y, and MT.
 
-CAMPAREE comes with scripts to work with this, but first we have to make a STAR index for it, using a built-in script available when the CAMPAREE environment is activate.
+CAMPAREE comes with scripts to work with this.
+First, we create the files and then we have to make a STAR index for it, using built-in scripts available when the CAMPAREE environment is activate.
 
+    create_camparee_baby_config
     create_star_index_for_baby_genome
 
 ### Perform Test Run
 
 We are now ready to run CAMPAREE on a two small sample fastq files aligning to the baby genome.
-If you have not already done so for installation, activate the python environment:
-
-    source ./venv_camparee/bin/activate
 
 The default config file for the baby genome has CAMPAREE run all operations serially on a single machine.
 To perform the test run with these defaults, first download the config file and then run CAMPAREE with it:
 
-    create_camparee_baby_config
     camparee --config baby.config.yaml --run_id 1
 
 The argument `--run_id 1` indicates that the run number is 1.

@@ -3,12 +3,16 @@
 # resources/baby_genome.mm10/star_index.genome/ directory in the CAMPAREE install
 # path.
 
+import sys
 import pathlib
 import subprocess
 from camparee.camparee_constants import CAMPAREE_CONSTANTS
 
 def main():
-    resources_dir = pathlib.Path(CAMPAREE_CONSTANTS.CAMPAREE_ROOT_DIR) / "resources"
+    resources_dir = pathlib.Path("resources")
+    if not resources_dir.exists() and resources_dir.is_dir():
+        print("Expected 'resources/' directory to be present. Did you run `create_camparee_test_files` command firt?")
+        sys.exit()
     star_path = pathlib.Path(CAMPAREE_CONSTANTS.CAMPAREE_ROOT_DIR) / "third_party_software" / "STAR"
 
     # Create directory for babY_gneome STAR index (if it doesn't already exist)

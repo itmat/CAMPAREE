@@ -19,7 +19,7 @@ class ExpressionPipeline:
 
     THIRD_PARTY_SOFTWARE_DIR_PATH = os.path.join(CAMPAREE_CONSTANTS.CAMPAREE_ROOT_DIR, "third_party_software")
     REQUIRED_RESOURCE_MAPPINGS = ['species_model', 'star_genome_index_directory_name',
-                                  'reference_genome_filename', 'annotation_filename', 'chr_ploidy_filename']
+                                  'reference_genome_filename', 'annotation_filename', 'chr_ploidy_filename', 'directory_path']
     REQUIRED_OUTPUT_MAPPINGS = ['directory_path', 'type', 'override_sample_molecule_count', 'default_molecule_count']
 
     def __init__(self, configuration, scheduler_mode, output_directory_path, input_samples):
@@ -346,10 +346,8 @@ class ExpressionPipeline:
 
         # If user did not provide a path to the resources directory, use the
         # directory contained in the CAMPAREE install path.
-        resources_directory_path = resources.get('directory_path', None)
-        if not resources_directory_path:
-            resources_directory_path = os.path.join(CAMPAREE_CONSTANTS.CAMPAREE_ROOT_DIR, "resources")
-        elif not (os.path.exists(resources_directory_path) and os.path.isdir(resources_directory_path)):
+        resources_directory_path = resources.get('directory_path')
+        if not (os.path.exists(resources_directory_path) and os.path.isdir(resources_directory_path)):
             print(f"The given resources directory, {resources_directory_path}, must exist as a directory.",
                   file=sys.stderr)
             return False

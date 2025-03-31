@@ -33,7 +33,7 @@ package-data.camparee = [
 camparee = "camparee.bin.run_camparee:main"
 create_star_index_for_baby_genome = "camparee.bin.create_star_index_for_baby_genome:main"
 molecule_file_to_fasta_and_count_table = "camparee.bin.molecule_file_to_fasta_and_count_table:main"
-create_camparee_baby_config = "camparee.bin.create_camparee_baby_config:main"
+create_camparee_test_files = "camparee.bin.create_camparee_test_files:main"
 
 [project.optional-dependencies]
 dev = ["black", "pytest", "Sphinx~=6.2.1", "sphinx-rtd-theme", "mypy"]
