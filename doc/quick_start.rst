@@ -13,81 +13,60 @@ Installation
 
 Make sure you have the following installed on your system:
 
-- git
-- python version 3.10
-- pip
+- python version 3.11
 - Java 1.8
 
-Pull the git repo for CAMPAREE and BEERS_UTILS the into a convenient location::
+1. Create a Python virtual environment to install required Python libraries to:
 
-    git clone https://github.com/itmat/CAMPAREE.git
-    git clone https://github.com/itmat/BEERS_UTILS.git
-
-Create a Python virtual environment to install required Python libraries. Note,
-if this command fails because your system doesn't recognize the ``python3``
-command, you might need to run it with ``python`` instead::
-
-    cd CAMPAREE
     python3 -m venv ./venv_camparee
 
-Note, on your system Python 3 might be accessed using the 'python'
-
-And activate the environment::
+2. Activate the environment:
 
     source ./venv_camparee/bin/activate
 
-Install required libraries::
+3. Install CAMPAREE:
 
-    pip install -r requirements.txt
-    pip install -r ../BEERS_UTILS/requirements.txt
+    pip install git+https://github.com/itmat/CAMPAREE
 
-Install CAMPAREE package in your Python environment::
+4. [Optional] Validate installation using the 'Baby Genome' as described in the :ref:`quick start guide <quick-start-baby-genome>`.
 
-    pip install -e .
-
-Next, install the BEERS_UTILS package that CAMPAREE uses::
-
-    pip install -e ../BEERS_UTILS
-
+5. Prepare/install resource files for the organism of choice (see full instructions in :ref:`Resource Files <resource-pre-built>` section).
 
 .. _quick-start-baby-genome:
 
 Baby Genome
 -----------
 
-The "baby genome" is a truncated version of mm10 consisting of segments of
-length at most 1 million bases chosen from chromosomes 1, 2, 3, X, Y, and MT.
+The "baby genome" is a truncated version of mm10 consisting of segments of length at most 1 million bases chosen from chromosomes 1, 2, 3, X, Y, and MT.
 
-Create STAR index for alignment to the baby genome::
+CAMPAREE comes with scripts to work with this.
+First, we create the files and then we have to make a STAR index for it, using built-in scripts available when the CAMPAREE environment is activate.
 
-    bin/create_star_index_for_baby_genome.sh
+    create_camparee_baby_config
+    create_star_index_for_baby_genome
 
 Perform Test Run
 ^^^^^^^^^^^^^^^^
 
-We are now ready to run CAMPAREE on a two small sample fastq files aligning to
-the baby genome. If you have not already done so for installation, activate the
-python environment::
+We are now ready to run CAMPAREE on a two small sample fastq files aligning to the baby genome.
 
-    source ./venv_camparee/bin/activate
+The default config file for the baby genome has CAMPAREE run all operations serially on a single machine.
+To perform the test run with these defaults, first download the config file and then run CAMPAREE with it::
 
-The default config file for the baby genome has CAMPAREE run all operations
-serially on a single machine. To perform the test with these defaults run::
+    camparee --config baby.config.yaml --run_id 1
 
-    bin/run_camparee.py -c config/baby.config.yaml -r 1
-
-The argument ``-r 1`` indicates that the run number is 1. If you run this again,
-you must either remove the output directory ``test_data/results/run_1/`` or
-specify a new run number.
+The argument `--run_id 1` indicates that the run number is 1.
+If you run this again, you must either remove the output directory `test_data/results/run_1/` or specify a new run number.
 
 It is also possible to test deployment to a cluster.
+
 For LSF clusters run::
 
-    bin/run_camparee.py -c config/baby.config.yaml -r 1 -m lsf
+    camparee --config baby.config.yaml --run_id 1 --scheduler_mode lsf
 
 For SGE clusters run::
 
-    bin/run_camparee.py -c config/baby.config.yaml -r 1 -m sge
+    camparee --config baby.config.yaml --run_id 1 --scheduler_mode sge
 
 Check Results
 ^^^^^^^^^^^^^
@@ -107,5 +86,5 @@ the CAMPAREE install directory::
 
 The output of this command should match the following md5sum values::
 
-    835791fad7ee1d8c00d4285ffc166bb1  sample1/molecule_file.txt
-    03cb79060e9878e01c7ce4b64646f88d  sample2/molecule_file.txt
+    60ab3c4fd245ad3003a8113d8edbdb2b  test_data/results/run_1/CAMPAREE/data/sample1/molecule_file.txt
+    6a5a1a2d9632f5fb3f3ea7740cee7514  test_data/results/run_1/CAMPAREE/data/sample2/molecule_file.txt
