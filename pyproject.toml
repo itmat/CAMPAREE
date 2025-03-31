@@ -9,7 +9,7 @@ version = "0.4.2"
 description = "Configurable And Modular Program Allowing RNA Expression Emulation"
 requires-python = ">=3.11"
 dependencies = [
-    "beers_utils @ git+https://github.com/itmat/BEERS_UTILS@4729697ae4128e5f40dfec0ea5a3e3503098de13",
+    "beers_utils @ git+https://github.com/itmat/BEERS_UTILS@52e1a00057d2939651ab587a4ad1a6873dc8d49e",
     "numpy==1.24.2",
     "roman==4.0",
     "pysam==0.20.0",
@@ -21,7 +21,13 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["camparee"]
-package-data.camparee = ["third_party_software/**", "resources/**", "bin/**", "test_data/**", "config/**"]
+package-data.camparee = [
+    "third_party_software/**",
+    "resources/**",
+    "bin/**",
+    "test_data/**",
+    "config/**",
+]
 
 [project.scripts]
 camparee = "camparee.bin.run_camparee:main"
