@@ -1,8 +1,10 @@
-scipy==1.10.0
-roman==3.0
-pandas==0.23.3
-matplotlib==3.0.1
-termcolor==1.1.0
-prettytable==0.7.2
-Sphinx==1.8.4
-PyYAML==5.4
+beers_utils @ git+https://github.com/itmat/BEERS_UTILS@52e1a00057d2939651ab587a4ad1a6873dc8d49e
+numpy==1.24.2
+roman==4.0
+pysam==0.20.0
+pandas==1.5.3
+termcolor==2.2.0
+prettytable==3.6.0
+PyYAML==6.0
+Sphinx~=6.2.1
+sphinx-rtd-theme
