@@ -261,10 +261,11 @@ class CampareeUtils:
                     #Check transcript in current line is a new transcript
                     if curr_gtf_tx != txid:
 
-                        #Check strand of transcript. If minus, reverse exon order.
-                        if strand == "-":
-                            ex_starts.reverse()
-                            ex_stops.reverse()
+                        # Sort exons by numeric chromosomal coordinates. This allows exons
+                        # to be listed out of order in the gtf/gff file. Note, exons from
+                        # different transcripts still can't be interleaved with on another.
+                        ex_starts.sort(key=int)
+                        ex_stops.sort(key=int)
 
                         #Format data from previous transcript and write to annotation file
                         output_annot_file.write(
@@ -309,10 +310,11 @@ class CampareeUtils:
 
             #Finish processing last transcript in GTF file
 
-            #Check strand. If minus, reverse exon order.
-            if strand == "-":
-                ex_starts.reverse()
-                ex_stops.reverse()
+            # Sort exons by numeric chromosomal coordinates. This allows exons
+            # to be listed out of order in the gtf/gff file. Note, exons from
+            # different transcripts still can't be interleaved with on another.
+            ex_starts.sort(key=int)
+            ex_stops.sort(key=int)
 
             #Format data from last transcript and write to annotation file
             output_annot_file.write(
