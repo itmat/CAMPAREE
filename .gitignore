@@ -12,6 +12,7 @@ __pycache__
 venv*
 *.egg-info
 *.swp
+build/
 
 # Ignore local builds of Sphinx HTML documentation
 doc/_build
