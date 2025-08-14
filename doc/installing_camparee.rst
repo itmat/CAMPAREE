@@ -6,44 +6,30 @@ Installing CAMPAREE
 General Instructions
 --------------------
 
-Installation Prerequisites:
-
-- git
-- python version 3.10
-- Java 1.8
-
 The following installation instructions are for Python3 installed in a Linux
 environment. Windows/Mac environments, or environments using an Anaconda/Miniconda
 installation of Python may require slight modifications to the commands below.
 
-1. Download CAMPAREE and BEERS_UTILS from their respective git repos::
+Make sure you have the following installed on your system:
 
-    git clone https://github.com/itmat/CAMPAREE.git
-    git clone https://github.com/itmat/BEERS_UTILS.git
+- python version 3.11
+- Java 1.8
 
-2. Create a Python virtual environment to install required Python libraries to::
+1. Create a Python virtual environment to install required Python libraries to:
 
-    cd CAMPAREE
     python3 -m venv ./venv_camparee
 
-3. Activate the Python environment::
+2. Activate the environment:
 
     source ./venv_camparee/bin/activate
 
-4. Install required libraries::
+3. Install CAMPAREE:
 
-    pip install -r requirements.txt
-    pip install -r ../BEERS_UTILS/requirements.txt
+    pip install git+https://github.com/itmat/CAMPAREE
 
-5. Install CAMPAREE and BEERS_UTILS packages in the Python environment::
+4. [Optional] Validate installation using the 'Baby Genome' as described in the :ref:`quick start guide <quick-start-baby-genome>`.
 
-    pip install -e .
-    pip install -e ../BEERS_UTILS
-
-6. [Optional] Validate installation using the 'Baby Genome' as described in the :ref:`quick start guide <quick-start-baby-genome>`.
-
-7. Prepare/install resource files for the organism of choice (see full instructions in :ref:`Resource Files <resource-pre-built>` section)
-
+5. Prepare/install resource files for the organism of choice (see full instructions in :ref:`Resource Files <resource-pre-built>` section).
 
 Installing CAMPAREE on AWS
 --------------------------
