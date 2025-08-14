@@ -88,7 +88,7 @@ class IntronQuantificationStep(AbstractCampareeStep):
                     strand = "-" if read1_reverse_aligned else "+"
                 else:
                     strand = "+" if read1_reverse_aligned else "-"
-                antisense_strand = "-" if strand is "+" else "+"
+                antisense_strand = "-" if strand == "+" else "+"
 
                 # Use get() method to prevent KeyError if any of these data structures
                 # are empty. This can occur for small chromosomes and non-standard
