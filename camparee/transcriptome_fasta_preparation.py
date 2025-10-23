@@ -364,8 +364,8 @@ class TranscriptomeFastaPreparationStep(AbstractCampareeStep):
                     if self.include_suffix_w_tx_id:
                         tx_id = tx_id + "_" + self.genome_suffix
 
-                    # Write the 1st line of the fasta entry - transcript location string
-                    transcriptome_fasta_file.write(f'>{tx_id}:{chromosome}:{start}-{end}_{strand}\n')
+                    # Write the 1st line of the fasta entry - transcript id
+                    transcriptome_fasta_file.write('>' + tx_id + '\n')
 
                     # Write the 2nd line of the fasta entry - gene sequence.
                     transcriptome_fasta_file.write(tx_sequence + '\n')

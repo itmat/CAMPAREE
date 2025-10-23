@@ -105,8 +105,8 @@ class AllelicImbalanceQuantificationStep(AbstractCampareeStep):
                 # Parse the fields for the reverse read into an array
                 rev_fields = reverse.rstrip('\n').split('\t')
 
-                fwd_transcript_id = fwd_fields[2].split(':')[0]
-                rev_transcript_id = rev_fields[2].split(':')[0]
+                fwd_transcript_id = fwd_fields[2]
+                rev_transcript_id = rev_fields[2]
 
                 # This means both forward and reverse reads are non-mappers
                 # So store 'transcript_id' as '*' and 'NM' as 2*read_length

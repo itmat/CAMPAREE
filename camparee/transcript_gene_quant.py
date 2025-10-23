@@ -101,7 +101,7 @@ class TranscriptGeneQuantificationStep(AbstractCampareeStep):
                     if line.startswith("target_id"):
                         continue
                     line = line.rstrip('\n').split('\t')
-                    transcript_id = line[0].split(':')[0]
+                    transcript_id = line[0]
                     transcript_fpk = float(line[3]) / float(line[2]) * 1000 # est_counts / eff_length * 1000 = FPK
                     transcript_final_count[transcript_id] = transcript_fpk
 

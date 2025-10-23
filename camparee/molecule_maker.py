@@ -200,7 +200,7 @@ class MoleculeMakerStep(AbstractCampareeStep):
                     continue # Comment/header line
 
                 gene, entries = line.strip().split("\t")
-                isoforms = [entry.split(":") for entry in entries.split(",")]
+                isoforms = [entry.rsplit(":", 1) for entry in entries.split(",")] # Split on final colon character in case isoform ID contains colons
                 isoforms = [(isoform, float(psi)) for isoform, psi in isoforms]
                 isoform_list = [isoform for isoform, psi in isoforms]
                 psi_list = [psi for isoform, psi in isoforms]
