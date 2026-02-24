@@ -56,7 +56,8 @@ class TranscriptomeFastaPreparationStep(AbstractCampareeStep):
         ----------
         sample_id : string
             Identifier for sample corresponding to this reference genome. Used to
-            construct output and log paths for this specific execution.
+            construct output and log paths for this specific execution. Set to
+            "None" and output/log paths will not include sample-specific directories.
         genome_suffix : string
             Suffix to identify the parent/allele of the source genome. Should be
             1 or 2. This same suffix is a appended to all output files, and the
@@ -77,7 +78,8 @@ class TranscriptomeFastaPreparationStep(AbstractCampareeStep):
 
         """
 
-        self.sample_id = sample_id
+        # If sample_id set through command line args, "None" will be string
+        self.sample_id = sample_id if sample_id != "None" else None
         self.genome_suffix = genome_suffix
         self.genome_fasta_file_path = genome_fasta_file_path
         self.edited_genome_fasta_file_path = os.path.splitext(genome_fasta_file_path)[0] + "_edited.fa"
@@ -85,9 +87,11 @@ class TranscriptomeFastaPreparationStep(AbstractCampareeStep):
         self.trimmed_annotation_file_path = os.path.splitext(annotation_file_path)[0] + "_trimmed.txt"
         self.include_suffix_w_tx_id = include_suffix_w_tx_id
 
-        self.transcriptome_fasta_file_path = os.path.join(self.data_directory_path, f'sample{self.sample_id}',
+        self.transcriptome_fasta_file_path = os.path.join(self.data_directory_path,
+                                                          f'sample{self.sample_id}' if self.sample_id else "",
                                                           CAMPAREE_CONSTANTS.TRANSCRIPTOME_FASTA_OUTPUT_FILENAME_PATTERN.format(genome_name=genome_suffix))
-        self.log_file_path = os.path.join(self.log_directory_path, f'sample{self.sample_id}',
+        self.log_file_path = os.path.join(self.log_directory_path,
+                                          f'sample{self.sample_id}' if self.sample_id else "",
                                           CAMPAREE_CONSTANTS.TRANSCRIPTOME_FASTA_LOG_FILENAME_PATTERN.format(genome_name=genome_suffix))
 
         # Holds unique listing of exon locations
@@ -166,7 +170,7 @@ class TranscriptomeFastaPreparationStep(AbstractCampareeStep):
         """
         Edits the genome fasta file, creating an edited version (genome fasta filename without extension + _edited.fa).
         Edits include:
-        1.  Removing suplemmental information from the description line
+        1.  Removing supplemental information from the description line
         2.  Removing internal newlines in the sequence
         3.  Insuring all bases in sequence are represented in upper case.
         This edited file is the one used in subsequent scripts.
@@ -381,7 +385,8 @@ class TranscriptomeFastaPreparationStep(AbstractCampareeStep):
         ----------
         sample_id : string
             Identifier for sample corresponding to this reference genome. Used to
-            construct output and log paths for this specific execution.
+            construct output and log paths for this specific execution. Set to "None"
+            and output/log paths will not include sample-specific directories.
         genome_suffix : string
             Suffix to identify the parent/allele of the source genome. Should be
             1 or 2. This same suffix is a appended to all output files, and the
@@ -414,7 +419,8 @@ class TranscriptomeFastaPreparationStep(AbstractCampareeStep):
         command = (f" python {txptome_fasta_prep_path}"
                    f" --log_directory_path {self.log_directory_path}"
                    f" --data_directory_path {self.data_directory_path}"
-                   f" --sample_id {sample_id}"
+                   # Need "None" to appear in the command line call
+                   f" --sample_id {sample_id if sample_id else "None"}"
                    f" --genome_suffix {genome_suffix}"
                    f" --genome_fasta_file_path {genome_fasta_file_path}"
                    f" --annotation_file_path {annotation_file_path}")
@@ -435,7 +441,8 @@ class TranscriptomeFastaPreparationStep(AbstractCampareeStep):
         ----------
         sample_id : string
             Identifier for sample corresponding to this reference genome. Used to
-            construct output and log paths for this specific execution.
+            construct output and log paths for this specific execution. Set to
+            "None" and output/log paths will not include sample-specific directories.
         genome_suffix : string
             Suffix to identify the parent/allele of the source genome. Should be
             1 or 2. This same suffix is a appended to all output files, and the
@@ -464,7 +471,7 @@ class TranscriptomeFastaPreparationStep(AbstractCampareeStep):
         validation_attributes = {}
         validation_attributes['data_directory'] = self.data_directory_path
         validation_attributes['log_directory'] = self.log_directory_path
-        validation_attributes['sample_id'] = sample_id
+        validation_attributes['sample_id'] = sample_id if sample_id != "None" else None
         validation_attributes['genome_suffix'] = genome_suffix
         validation_attributes['genome_fasta_file_path'] = genome_fasta_file_path
         validation_attributes['annotation_file_path'] = annotation_file_path
@@ -507,9 +514,11 @@ class TranscriptomeFastaPreparationStep(AbstractCampareeStep):
         # Construct output filenames
         edited_genome_fasta_file_path = os.path.splitext(genome_fasta_file_path)[0] + "_edited.fa"
         trimmed_annotation_file_path = os.path.splitext(annotation_file_path)[0] + "_trimmed.txt"
-        transcriptome_fasta_file_path = os.path.join(data_directory, f'sample{sample_id}',
+        transcriptome_fasta_file_path = os.path.join(data_directory,
+                                                     f'sample{sample_id}' if sample_id else "",
                                                      CAMPAREE_CONSTANTS.TRANSCRIPTOME_FASTA_OUTPUT_FILENAME_PATTERN.format(genome_name=genome_suffix))
-        log_file_path = os.path.join(log_directory_path, f'sample{sample_id}',
+        log_file_path = os.path.join(log_directory_path,
+                                     f'sample{sample_id}' if sample_id else "",
                                      CAMPAREE_CONSTANTS.TRANSCRIPTOME_FASTA_LOG_FILENAME_PATTERN.format(genome_name=genome_suffix))
 
         if os.path.isfile(edited_genome_fasta_file_path) and \
@@ -542,7 +551,7 @@ class TranscriptomeFastaPreparationStep(AbstractCampareeStep):
         parser.add_argument('-d', '--data_directory_path', required=True,
                             help='Path to data directory')
         parser.add_argument('--sample_id', required=True,
-                            help='Sample ID associated with input genome.')
+                            help='Sample ID associated with input genome. Set to "None" for sample-agnostic genome.')
         parser.add_argument('--genome_suffix', required=True,
                             help='Suffix identifying parent/allele of source genome.')
         parser.add_argument('-g', '--genome_fasta_file_path', required=True,

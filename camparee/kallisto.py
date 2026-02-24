@@ -52,6 +52,8 @@ class KallistoIndexStep(AbstractCampareeStep):
         sample_id : string
             Identifier for sample corresponding to reference transcriptome. Used
             to construct index and log paths for this specific kallisto execution.
+            Set to "None" and output/log paths will not include sample-specific
+            directories.
         genome_suffix : string
             Suffix to identify the parent/allele of the transcriptome. Should be
             1 or 2. This same suffix is a appended to all output files/directories.
@@ -64,19 +66,24 @@ class KallistoIndexStep(AbstractCampareeStep):
 
         """
 
-        kallisto_index_dir_path = os.path.join(self.data_directory_path, f'sample{sample_id}',
+        # If sample_id set through command line args, "None" will be string
+        if sample_id == "None":
+            sample_id = None
+        kallisto_index_dir_path = os.path.join(self.data_directory_path,
+                                               f'sample{sample_id}' if sample_id else "",
                                                KallistoIndexStep.KALLISTO_INDEX_DIR_PATTERN.format(genome_name=genome_suffix))
         kallisto_index_file_path = os.path.join(kallisto_index_dir_path,
                                                 KallistoIndexStep.KALLISTO_INDEX_FILENAME_PATTERN.format(genome_name=genome_suffix))
-        log_file_path = os.path.join(self.log_directory_path, f'sample{sample_id}',
+        log_file_path = os.path.join(self.log_directory_path,
+                                     f'sample{sample_id}' if sample_id else "",
                                      KallistoIndexStep.KALLISTO_INDEX_LOG_FILENAME_PATTERN.format(genome_name=genome_suffix))
 
         with open(log_file_path, 'w') as log_file:
 
-            print(f"Building kallisto indexes for transcriptome {genome_suffix} "
-                  f"of sample{sample_id}.")
-            log_file.write(f"Building kallisto indexes for transcriptome {genome_suffix} "
-                           f"of sample{sample_id}.\n")
+            log_message = f"Building kallisto indexes for transcriptome {genome_suffix}" + \
+                          (f" of sample{sample_id}." if sample_id else ".")
+            print(log_message)
+            log_file.write(f"{log_message}\n")
 
             log_file.write(f"Parameters:\n"
                            f"    kallisto binary path: {kallisto_bin_path}\n"
@@ -129,6 +136,8 @@ class KallistoIndexStep(AbstractCampareeStep):
         sample_id : string
             Identifier for sample corresponding to reference transcriptome. Used
             to construct index and log paths for this specific kallisto execution.
+            Set to "None" and output/log paths will not include sample-specific
+            directories.
         genome_suffix : string
             Suffix to identify the parent/allele of the transcriptome. Should be
             1 or 2. This same suffix is a appended to all output files/directories.
@@ -156,7 +165,7 @@ class KallistoIndexStep(AbstractCampareeStep):
         command = (f" python {kallisto_step_path} index"
                    f" --log_directory_path {self.log_directory_path}"
                    f" --data_directory_path {self.data_directory_path}"
-                   f" --sample_id {sample_id}"
+                   f" --sample_id {sample_id if sample_id else "None"}"
                    f" --genome_suffix {genome_suffix}"
                    f" --kallisto_bin_path {kallisto_bin_path}"
                    f" --transcriptome_fasta_file_path {transcriptome_fasta_path}")
@@ -173,6 +182,8 @@ class KallistoIndexStep(AbstractCampareeStep):
         sample_id : string
             Identifier for sample corresponding to reference transcriptome. Used
             to construct index and log paths for this specific kallisto execution.
+            Set to "None" and output/log paths will not include sample-specific
+            directories.
         genome_suffix : string
             Suffix to identify the parent/allele of the transcriptome. Should be
             1 or 2. This same suffix is a appended to all output files/directories.
@@ -196,7 +207,7 @@ class KallistoIndexStep(AbstractCampareeStep):
         validation_attributes = {}
         validation_attributes['data_directory'] = self.data_directory_path
         validation_attributes['log_directory'] = self.log_directory_path
-        validation_attributes['sample_id'] = sample_id
+        validation_attributes['sample_id'] = sample_id if sample_id != "None" else None
         validation_attributes['genome_suffix'] = genome_suffix
         return validation_attributes
 
@@ -230,10 +241,12 @@ class KallistoIndexStep(AbstractCampareeStep):
         valid_output = False
 
         # Construct output filenames/paths
-        kallisto_index_file_path = os.path.join(data_directory_path, f'sample{sample_id}',
+        kallisto_index_file_path = os.path.join(data_directory_path,
+                                                f'sample{sample_id}' if sample_id else "",
                                                 KallistoIndexStep.KALLISTO_INDEX_DIR_PATTERN.format(genome_name=genome_suffix),
                                                 KallistoIndexStep.KALLISTO_INDEX_FILENAME_PATTERN.format(genome_name=genome_suffix))
-        log_file_path = os.path.join(log_directory_path, f'sample{sample_id}',
+        log_file_path = os.path.join(log_directory_path,
+                                     f'sample{sample_id}' if sample_id else "",
                                      KallistoIndexStep.KALLISTO_INDEX_LOG_FILENAME_PATTERN.format(genome_name=genome_suffix))
 
         if os.path.isfile(kallisto_index_file_path) and \
@@ -314,7 +327,10 @@ class KallistoQuantStep(AbstractCampareeStep):
 
         """
 
-        kallisto_index_file_path = os.path.join(self.data_directory_path, f'sample{sample.sample_id}',
+        kallisto_index_file_path = os.path.join(self.data_directory_path,
+                                                # Pooled samples don't have sample-specific parental kallisto indexes.
+                                                # They all use a common index built from the reference,
+                                                f'sample{sample.sample_id}' if sample.pooled is False else "",
                                                 KallistoIndexStep.KALLISTO_INDEX_DIR_PATTERN.format(genome_name=genome_suffix),
                                                 KallistoIndexStep.KALLISTO_INDEX_FILENAME_PATTERN.format(genome_name=genome_suffix))
         kallisto_output_path = os.path.join(self.data_directory_path, f'sample{sample.sample_id}',

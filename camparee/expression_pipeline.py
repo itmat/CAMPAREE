@@ -408,6 +408,16 @@ class ExpressionPipeline:
 
         seeds = self.generate_job_seeds()
 
+        # Pooled samples should not be phased and have different analysis requirements
+        pooled_samples = []
+        unpooled_samples = []
+
+        for sample in self.samples:
+            if sample.pooled is True:
+                pooled_samples.append(sample)
+            else:
+                unpooled_samples.append(sample)
+
         bam_files = {}
         for sample in self.samples:
             #Retrieve name of BAM file associated with this sample. This is either
@@ -429,7 +439,7 @@ class ExpressionPipeline:
                           cmd_line_args=[sample, bam_filename],
                           dependency_list=[f"GenomeAlignmentStep_{sample.sample_id}"])
 
-        for sample in self.samples:
+        for sample in unpooled_samples:
             bam_filename = bam_files[sample.sample_id]
             seed = seeds[f"VariantsFinderStep_{sample.sample_id}"]
             self.run_step(step_name='VariantsFinderStep',
@@ -455,30 +465,31 @@ class ExpressionPipeline:
         # Can't phase variants with only one sample. Need VariantsCompilationStep
         # output (alleles separated by "|", instead of "/") to follow phased format,
         # since that's what the GenomeBuilderStep scripts can process.
-        if len(self.samples) == 1:
+        if len(unpooled_samples) == 1:
             phased_output = True
         self.run_step(step_name='VariantsCompilationStep',
                       sample=None,
-                      cmd_line_args=[[sample.sample_id for sample in self.samples],
+                      cmd_line_args=[[sample.sample_id for sample in unpooled_samples],
                                      self.chr_ploidy_file_path,
                                      self.reference_genome_file_path,
                                      phased_output,
                                      seed],
-                      dependency_list=[f"VariantsFinderStep_{sample.sample_id}" for sample in self.samples])
+                      dependency_list=[f"VariantsFinderStep_{sample.sample_id}" for sample in unpooled_samples])
 
         phased_vcf_file = self.optional_inputs['phased_vcf_file']
         # If user did not provide phased vcf file
         if phased_vcf_file is None:
-            # Can't phase variants with only one sample
-            if len(self.samples) == 1:
-                phased_vcf_file = os.path.join(self.data_directory_path,
-                                               CAMPAREE_CONSTANTS.VARIANTS_COMPILATION_OUTPUT_FILENAME)
-            else:
+            # Can't phase variants with only one sample, or if all samples
+            # are pooled from multiple individuals
+            if len(unpooled_samples) > 1:
                 seed = seeds["BeagleStep"]
                 self.run_step(step_name='BeagleStep',
                               sample=None,
                               cmd_line_args=[self.beagle_file_path, seed],
                               dependency_list=["VariantsCompilationStep"])
+            else:
+                phased_vcf_file = os.path.join(self.data_directory_path,
+                                               CAMPAREE_CONSTANTS.VARIANTS_COMPILATION_OUTPUT_FILENAME)
 
         #TODO: We could load all of the steps in the entire pipeline into the queue
         #      and then just have the queue keep running until everything finishes.
@@ -486,7 +497,8 @@ class ExpressionPipeline:
         #      stdout indicating which stage is running for the pipeline.
         self.expression_pipeline_monitor.monitor_until_all_jobs_completed(queue_update_interval=10)
 
-        for sample in self.samples:
+        # Can only derive parental genomes from unpooled samples
+        for sample in unpooled_samples:
             print(f"Processing sample{sample.sample_id} ({sample.sample_name})...")
             dep_list = None
             if phased_vcf_file is None:
@@ -553,6 +565,69 @@ class ExpressionPipeline:
                                   dependency_list=[f"Bowtie2IndexStep_{sample.sample_id}-{suffix}"],
                                   jobname_suffix=suffix)
 
+        # For pooled samples, estimate transcript and PSI quantification from reference genome and annotation
+        # (don't construct parental genomes/alleles)
+        if len(pooled_samples) > 0:
+            
+            # Set suffix for compatibility with downstream checking against dependency
+            # lists, even though suffix is meaningless for pooled samples (only using
+            # reference seq/annot, and not creating parental genomes identified with suffix).
+            suffix = 1
+
+            # Construct single reference genome outside of sample-specific data directory
+            self.run_step(step_name='GenomeBuilderStep',
+                          sample=None,
+                          # Enter dummy value for VCF file path, since it will be ignored
+                          cmd_line_args=[None, "NO_VARIANTS", self.chr_ploidy_file_path,
+                                         # 'True' argument is to build reference genome
+                                         self.reference_genome_file_path, True])
+
+            # Construct single reference annotation outside of sample-specific dat adirectory
+            self.run_step(step_name='UpdateAnnotationForGenomeStep',
+                          sample=None,
+                          # Set first argument (sample) so output/log files are stored in
+                          # common directory (not sample specific)
+                          cmd_line_args=[None, suffix, self.annotation_file_path,
+                                         self.chr_ploidy_file_path],
+                          dependency_list=['GenomeBuilderStep'])
+
+            annot_path = os.path.join(self.data_directory_path,
+                                      CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name=genome_indel_suffix))
+            genome_path = os.path.join(self.data_directory_path,
+                                       CAMPAREE_CONSTANTS.GENOMEBUILDER_SEQUENCE_FILENAME_PATTERN.format(genome_name=suffix))
+            
+            # Construct single reference transcriptome outside of sample-specific data directory
+            self.run_step(step_name='TranscriptomeFastaPreparationStep',
+                          # Excluding sample means log files saved one level above sample-specific directories
+                          sample=None,
+                          # Set first argument (sample_id) so output/log files are stored in
+                          # common directory (not sample specific)
+                          cmd_line_args=[None, suffix, genome_path, annot_path],
+                          dependency_list=['UpdateAnnotationForGenomeStep'])
+
+            tx_fasta_path = os.path.join(self.data_directory_path,
+                                         CAMPAREE_CONSTANTS.TRANSCRIPTOME_FASTA_OUTPUT_FILENAME_PATTERN.format(genome_name=suffix))
+            
+            # Necessary for both gene and PSI quantification. Do not skip if
+            # user provides optional input for only one of these distributions.
+            if self.sample_optional_inputs[sample.sample_id]['gene_quant'] is None or \
+                self.sample_optional_inputs[sample.sample_id]['psi_quant'] is None:
+                self.run_step(step_name='KallistoIndexStep',
+                              sample=None,
+                              # Set first argument (sample_id) so output/log files are stored in
+                              # common directory (not sample specific)
+                              cmd_line_args=[None, suffix, self.kallisto_file_path,
+                                             tx_fasta_path],
+                              dependency_list=["TranscriptomeFastaPreparationStep"])
+
+                for sample in pooled_samples:
+                    self.run_step(step_name='KallistoQuantStep',
+                                  sample=sample,
+                                  cmd_line_args=[sample, suffix, self.kallisto_file_path],
+                                  dependency_list=["KallistoIndexStep"],
+                                  jobname_suffix=suffix)
+
+        for sample in self.samples:
             # Necessary for both gene and PSI quantification. Do not skip if
             # user provides optional input for only one of these distributions.
             if self.sample_optional_inputs[sample.sample_id]['gene_quant'] is None or \
@@ -565,12 +640,16 @@ class ExpressionPipeline:
                                                    CAMPAREE_CONSTANTS.KALLISTO_ABUNDANCE_FILENAME)
                 update_annot_path = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
                                                  CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name=suffix))
+                # Pooled samples use reference annotation
+                if sample.pooled is True:
+                    update_annot_path = self.annotation_file_path
+                
                 self.run_step(step_name='TranscriptGeneQuantificationStep',
                               sample=sample,
                               cmd_line_args=[sample.sample_id, kallisto_quant_path, update_annot_path],
                               dependency_list=[f"KallistoQuantStep_{sample.sample_id}-{suffix}"])
 
-            if self.sample_optional_inputs[sample.sample_id]['allele_quant'] is None:
+            if self.sample_optional_inputs[sample.sample_id]['allele_quant'] is None and sample.pooled is False:
                 genome_alignment_path = bam_files[sample.sample_id]
                 update_annot_path_1 = os.path.join(self.data_directory_path, f"sample{sample.sample_id}",
                                                    CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name='1'))
@@ -609,6 +688,8 @@ class ExpressionPipeline:
             # produced by this step.
             dep_list = [f"TranscriptomeFastaPreparationStep_{sample.sample_id}-1",
                         f"TranscriptomeFastaPreparationStep_{sample.sample_id}-2"]
+            if sample.pooled is True:
+                dep_list = ["TranscriptomeFastaPreparationStep"]
 
             intron_quant_path = os.path.join(sample_data_directory, CAMPAREE_CONSTANTS.INTRON_OUTPUT_FILENAME)
             if user_intron_quant_path is not None:
@@ -629,18 +710,19 @@ class ExpressionPipeline:
             else:
                 shutil.copy(user_psi_quant_path, psi_quant_path)
 
-            allele_quant_path = os.path.join(sample_data_directory, CAMPAREE_CONSTANTS.ALLELIC_IMBALANCE_OUTPUT_FILENAME)
-            if user_allele_quant_path is None:
-                dep_list.append(f"AllelicImbalanceQuantificationStep_{sample.sample_id}")
-            else:
-                shutil.copy(user_allele_quant_path, allele_quant_path)
+            if sample.pooled is False:
+                allele_quant_path = os.path.join(sample_data_directory, CAMPAREE_CONSTANTS.ALLELIC_IMBALANCE_OUTPUT_FILENAME)
+                if user_allele_quant_path is None:
+                    dep_list.append(f"AllelicImbalanceQuantificationStep_{sample.sample_id}")
+                else:
+                    shutil.copy(user_allele_quant_path, allele_quant_path)
 
             # If no molecule count specified for this sample, use the default count.
             if not num_molecules_to_generate or self.override_sample_molecule_count:
                 num_molecules_to_generate = self.default_molecule_count
             self.run_step(step_name='MoleculeMakerStep',
                           sample=sample,
-                          cmd_line_args=[sample,  sample_data_directory,
+                          cmd_line_args=[sample, sample_data_directory,
                                          self.output_type, num_molecules_to_generate, seed],
                           dependency_list=dep_list)
 
