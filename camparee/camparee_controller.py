@@ -323,7 +323,15 @@ class CampareeController:
             if input_sample["optional_inputs"] is not None and "bam_file" in input_sample["optional_inputs"]:
                 bam_file_path = os.path.join(bam_directory_path, input_sample["optional_inputs"]["bam_file"])
             gender = input_sample.get("gender", None)
-            pooled = input_sample["pooled"]
+            # Temporary fix, because BEERS_UTILS Sample() constructor takes values for the 'pooled'
+            # parameter as-is. It does not test or convert it to a boolean value. This causes problems
+            # with downstream code that tests the sample.pooled parameter as if it is a boolean. For
+            # now, making this conversion before calling the Sample constructor should fix the problem.
+            # For a complete fix, I need to go into BEERS_UTILS and make the change there.
+            # pooled = input_sample["pooled"]
+            # The validate_samples() function already checks that pooled values in the config file are
+            # either "True" or "False", so no need to re-check here
+            pooled = input_sample["pooled"] == "True" # Convert from string to boolean
             molecule_count = input_sample.get("molecule_count", None)
             if gender:
                 gender = gender.lower()

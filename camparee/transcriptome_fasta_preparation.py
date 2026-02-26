@@ -420,7 +420,7 @@ class TranscriptomeFastaPreparationStep(AbstractCampareeStep):
                    f" --log_directory_path {self.log_directory_path}"
                    f" --data_directory_path {self.data_directory_path}"
                    # Need "None" to appear in the command line call
-                   f" --sample_id {sample_id if sample_id else "None"}"
+                   f" --sample_id {sample_id if sample_id else 'None'}"
                    f" --genome_suffix {genome_suffix}"
                    f" --genome_fasta_file_path {genome_fasta_file_path}"
                    f" --annotation_file_path {annotation_file_path}")

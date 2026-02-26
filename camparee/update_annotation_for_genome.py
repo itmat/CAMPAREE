@@ -276,7 +276,7 @@ class UpdateAnnotationForGenomeStep(AbstractCampareeStep):
         command = (f" python {update_annotation_path}"
                    f" --log_directory_path {self.log_directory_path}"
                    f" --data_directory_path {self.data_directory_path}"
-                   f" --sample '{repr(sample) if sample else "None"}'"
+                   f" --sample '{repr(sample) if sample else 'None'}'"
                    f" --genome_indel_suffix {genome_indel_suffix}"
                    f" --input_annot_file_path {input_annot_file_path}"
                    f" --chr_ploidy_file_path {chr_ploidy_file_path}")
@@ -476,6 +476,8 @@ class UpdateAnnotationForGenomeStep(AbstractCampareeStep):
         if args.sample and args.sample != "None":
             if args.sample != "None":
                 sample = eval(args.sample)
+                # Temp fix until Sample() constructor converts pooled argument to boolean
+                sample.pooled = sample.pooled == "True"
             else:
                 sample = None
         else:

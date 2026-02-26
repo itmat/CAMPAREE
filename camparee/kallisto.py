@@ -165,7 +165,7 @@ class KallistoIndexStep(AbstractCampareeStep):
         command = (f" python {kallisto_step_path} index"
                    f" --log_directory_path {self.log_directory_path}"
                    f" --data_directory_path {self.data_directory_path}"
-                   f" --sample_id {sample_id if sample_id else "None"}"
+                   f" --sample_id {sample_id if sample_id else 'None'}"
                    f" --genome_suffix {genome_suffix}"
                    f" --kallisto_bin_path {kallisto_bin_path}"
                    f" --transcriptome_fasta_file_path {transcriptome_fasta_path}")
@@ -510,6 +510,8 @@ class KallistoQuantStep(AbstractCampareeStep):
         command line with the 'quant' subcommand.
         """
         sample = eval(cmd_args.sample) # Requires Sample function from BEERS_UTILS.sample
+        # Temp fix until Sample() constructor converts pooled argument to boolean
+        sample.pooled = sample.pooled == "True"
         kallisto_quant = KallistoQuantStep(log_directory_path=cmd_args.log_directory_path,
                                            data_directory_path=cmd_args.data_directory_path)
         kallisto_quant.execute(sample=sample,

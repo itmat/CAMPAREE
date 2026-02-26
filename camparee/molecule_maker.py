@@ -752,6 +752,8 @@ class MoleculeMakerStep(AbstractCampareeStep):
                                  'Used samples pooled from multiple individuals.')
         args = parser.parse_args()
         sample = eval(args.sample)
+        # Temp fix until Sample() constructor converts pooled argument to boolean
+        sample.pooled = sample.pooled == "True"
 
         molecule_maker = MoleculeMakerStep(
                 log_directory_path=args.log_directory_path,

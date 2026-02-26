@@ -202,6 +202,8 @@ class GenomeAlignmentStep(AbstractCampareeStep):
         """
 
         sample = eval(cmd_args.sample)
+        # Temp fix until Sample() constructor converts pooled argument to boolean
+        sample.pooled = sample.pooled == "True"
         parameters = json.loads(cmd_args.star_parameters)
         genome_alignment = GenomeAlignmentStep(log_directory_path=cmd_args.log_directory_path,
                                                data_directory_path=cmd_args.data_directory_path,
@@ -353,6 +355,8 @@ class GenomeBamIndexStep(AbstractCampareeStep):
         command line with the 'index' subcommand.
         """
         sample = eval(cmd_args.sample)
+        # Temp fix until Sample() constructor converts pooled argument to boolean
+        sample.pooled = sample.pooled == "True"
         genome_index = GenomeBamIndexStep(log_directory_path=cmd_args.log_directory_path,
                                           data_directory_path=cmd_args.data_directory_path)
         genome_index.execute(sample=sample,

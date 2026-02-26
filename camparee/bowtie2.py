@@ -578,6 +578,8 @@ class Bowtie2AlignStep(AbstractCampareeStep):
         the command line with the 'align' subcommand.
         """
         sample = eval(cmd_args.sample) # Requires Sample function from BEERS_UTILS.sample
+        # Temp fix until Sample() constructor converts pooled argument to boolean
+        sample.pooled = sample.pooled == "True"
         parameters = json.loads(cmd_args.bowtie2_parameters)
         parameters['num_bowtie_threads'] = cmd_args.num_bowtie2_threads
         bowtie2_align = Bowtie2AlignStep(log_directory_path=cmd_args.log_directory_path,

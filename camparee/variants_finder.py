@@ -430,6 +430,8 @@ class VariantsFinderStep(AbstractCampareeStep):
                                              args.data_directory_path,
                                              config_parameters)
         sample = eval(args.sample)
+        # Temp fix until Sample() constructor converts pooled argument to boolean
+        sample.pooled = sample.pooled == "True"
         reference_genome = CampareeUtils.create_genome(args.reference_genome_file_path)
         chr_ploidy_data = CampareeUtils.create_chr_ploidy_data(args.chr_ploidy_file_path)
         variants_finder.execute(sample,

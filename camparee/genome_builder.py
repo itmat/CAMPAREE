@@ -188,6 +188,14 @@ class GenomeBuilderStep(AbstractCampareeStep):
         # The chromosome list derived from the chr_ploidy_data is the gold standard.  Only those chromosomes/contigs
         # are processed.
         self.chromosome_list = chromosome_list if chromosome_list else list(chr_ploidy_data.keys())
+
+        self.sample_id = None
+        self.gender = None
+
+        if build_ref_genome is False:
+            self.sample_id = f'sample{sample.sample_id}'
+            self.gender = sample.gender
+
         self.genome_output_directory = os.path.join(self.data_directory_path,
                                                     self.sample_id if build_ref_genome is False else "")
         self.log_file_path = os.path.join(self.log_directory_path,
@@ -197,17 +205,13 @@ class GenomeBuilderStep(AbstractCampareeStep):
         self.variants_file_path = os.path.join(self.data_directory_path,
                                                self.sample_id if build_ref_genome is False else "",
                                                CAMPAREE_CONSTANTS.VARIANTS_FINDER_OUTPUT_FILENAME)
-        
-        self.sample_id = None
-        self.gender = None
+
         sample_index = None
         self.unpaired_chr_list = None
         self.unpaired_chr_variants = None
         self.paired_chr_list = None
 
         if build_ref_genome is False:
-            self.sample_id = f'sample{sample.sample_id}'
-            self.gender = sample.gender
             sample_index = self.locate_sample()
             self.unpaired_chr_list = self.get_unpaired_chr_list()
             self.unpaired_chr_variants = self.get_unpaired_chr_variant_data()
@@ -284,7 +288,7 @@ class GenomeBuilderStep(AbstractCampareeStep):
         command = (f" python {genome_builder_path}"
                    f" --log_directory_path {self.log_directory_path}"
                    f" --data_directory_path {self.data_directory_path}"
-                   f" --sample '{repr(sample) if build_ref_genome is False else "None"}'"
+                   f" --sample '{repr(sample) if build_ref_genome is False else 'None'}'"
                    f" --phased_vcf_file_path {phased_vcf_file_path}"
                    f" --chr_ploidy_file_path {chr_ploidy_file_path}"
                    f" --reference_genome_file_path {reference_genome_file_path}")
@@ -676,6 +680,8 @@ class GenomeBuilderStep(AbstractCampareeStep):
 
         if args.sample and args.build_reference_genome is False:
             sample = eval(args.sample)
+            # Temp fix until Sample() constructor converts pooled argument to boolean
+            sample.pooled = sample.pooled == "True"
         else:
             #Create dummy sample for debug purposes, or if building a reference genome.
             sample = Sample(None, "No sample", "", "", None)

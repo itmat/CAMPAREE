@@ -592,7 +592,7 @@ class ExpressionPipeline:
                           dependency_list=['GenomeBuilderStep'])
 
             annot_path = os.path.join(self.data_directory_path,
-                                      CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name=genome_indel_suffix))
+                                      CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name=suffix))
             genome_path = os.path.join(self.data_directory_path,
                                        CAMPAREE_CONSTANTS.GENOMEBUILDER_SEQUENCE_FILENAME_PATTERN.format(genome_name=suffix))
             
@@ -642,7 +642,8 @@ class ExpressionPipeline:
                                                  CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name=suffix))
                 # Pooled samples use reference annotation
                 if sample.pooled is True:
-                    update_annot_path = self.annotation_file_path
+                    update_annot_path = os.path.join(self.data_directory_path,
+                                                     CAMPAREE_CONSTANTS.UPDATEANNOT_OUTPUT_FILENAME_PATTERN.format(genome_name=suffix))
                 
                 self.run_step(step_name='TranscriptGeneQuantificationStep',
                               sample=sample,
