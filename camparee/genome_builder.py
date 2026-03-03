@@ -207,9 +207,9 @@ class GenomeBuilderStep(AbstractCampareeStep):
                                                CAMPAREE_CONSTANTS.VARIANTS_FINDER_OUTPUT_FILENAME)
 
         sample_index = None
-        self.unpaired_chr_list = None
-        self.unpaired_chr_variants = None
-        self.paired_chr_list = None
+        self.unpaired_chr_list = []
+        self.unpaired_chr_variants = []
+        self.paired_chr_list = []
 
         if build_ref_genome is False:
             sample_index = self.locate_sample()

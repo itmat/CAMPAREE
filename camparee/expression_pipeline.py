@@ -467,14 +467,16 @@ class ExpressionPipeline:
         # since that's what the GenomeBuilderStep scripts can process.
         if len(unpooled_samples) == 1:
             phased_output = True
-        self.run_step(step_name='VariantsCompilationStep',
-                      sample=None,
-                      cmd_line_args=[[sample.sample_id for sample in unpooled_samples],
-                                     self.chr_ploidy_file_path,
-                                     self.reference_genome_file_path,
-                                     phased_output,
-                                     seed],
-                      dependency_list=[f"VariantsFinderStep_{sample.sample_id}" for sample in unpooled_samples])
+        
+        if len(unpooled_samples) > 0:
+            self.run_step(step_name='VariantsCompilationStep',
+                        sample=None,
+                        cmd_line_args=[[sample.sample_id for sample in unpooled_samples],
+                                        self.chr_ploidy_file_path,
+                                        self.reference_genome_file_path,
+                                        phased_output,
+                                        seed],
+                        dependency_list=[f"VariantsFinderStep_{sample.sample_id}" for sample in unpooled_samples])
 
         phased_vcf_file = self.optional_inputs['phased_vcf_file']
         # If user did not provide phased vcf file
@@ -712,11 +714,15 @@ class ExpressionPipeline:
                 shutil.copy(user_psi_quant_path, psi_quant_path)
 
             if sample.pooled is False:
+                genome_and_annot_dir = None # Use sample-specific genome/annot dirs
                 allele_quant_path = os.path.join(sample_data_directory, CAMPAREE_CONSTANTS.ALLELIC_IMBALANCE_OUTPUT_FILENAME)
                 if user_allele_quant_path is None:
                     dep_list.append(f"AllelicImbalanceQuantificationStep_{sample.sample_id}")
                 else:
                     shutil.copy(user_allele_quant_path, allele_quant_path)
+            else:
+                # Pooled samples use reference genome/annot stored in common directory
+                genome_and_annot_dir = os.path.join(self.data_directory_path)
 
             # If no molecule count specified for this sample, use the default count.
             if not num_molecules_to_generate or self.override_sample_molecule_count:
@@ -724,7 +730,9 @@ class ExpressionPipeline:
             self.run_step(step_name='MoleculeMakerStep',
                           sample=sample,
                           cmd_line_args=[sample, sample_data_directory,
-                                         self.output_type, num_molecules_to_generate, seed],
+                                         self.output_type, num_molecules_to_generate, seed,
+                                         # Currently no support for overriding molecules per packet (None argument)
+                                         None, genome_and_annot_dir],
                           dependency_list=dep_list)
 
         self.expression_pipeline_monitor.monitor_until_all_jobs_completed(queue_update_interval=10)

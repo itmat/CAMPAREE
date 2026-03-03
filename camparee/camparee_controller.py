@@ -329,9 +329,10 @@ class CampareeController:
             # now, making this conversion before calling the Sample constructor should fix the problem.
             # For a complete fix, I need to go into BEERS_UTILS and make the change there.
             # pooled = input_sample["pooled"]
-            # The validate_samples() function already checks that pooled values in the config file are
-            # either "True" or "False", so no need to re-check here
-            pooled = input_sample["pooled"] == "True" # Convert from string to boolean
+            # Convert from string to boolean, if not already boolean. The validate_samples() function
+            # already checks that pooled values in the config file are either "True" or "False", so no
+            # need to re-check here
+            pooled = input_sample["pooled"] == "True" or input_sample["pooled"] is True
             molecule_count = input_sample.get("molecule_count", None)
             if gender:
                 gender = gender.lower()
